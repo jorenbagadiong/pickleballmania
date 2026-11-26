@@ -1,3 +1,4 @@
+import { ATHLETES, parseLook } from '@pickleball/shared'
 import { type Bone, Group, type Material, type Object3D, type SkinnedMesh, Vector3 } from 'three'
 import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
@@ -5,7 +6,7 @@ import { BONES, type Motion, type Rest } from './skeleton'
 import type { Motions } from './locomotion'
 
 /** The people players can look like (see tools/characters). */
-export const ATHLETES = ['m1', 'm2', 'm3', 'f1', 'f2', 'f3'] as const
+export { ATHLETES }
 
 const loader = new GLTFLoader()
 const load = (file: string): Promise<GLTF> => loader.loadAsync(`/models/${file}`)
@@ -133,11 +134,24 @@ export async function loadAthlete(name: string): Promise<Athlete> {
   }
 }
 
-/** Who everyone on a court looks like: by name, but no two the same while there are enough. */
-export function castFor(players: readonly { id: string; nickname: string }[]): Map<string, string> {
+/**
+ * Who everyone on a court looks like: whoever they chose, and otherwise by name, but
+ * not like anyone else on the court while there are enough people to go round.
+ */
+export function castFor(
+  players: readonly { id: string; nickname: string; look?: string }[],
+): Map<string, string> {
   const out = new Map<string, string>()
   const taken = new Set<string>()
   for (const p of players) {
+    const chosen = parseLook(p.look)
+    if (chosen) {
+      out.set(p.id, chosen)
+      taken.add(chosen)
+    }
+  }
+  for (const p of players) {
+    if (out.has(p.id)) continue
     let i = ATHLETES.indexOf(athleteFor(p.nickname))
     for (let k = 0; k < ATHLETES.length && taken.has(ATHLETES[i]!); k++)
       i = (i + 1) % ATHLETES.length

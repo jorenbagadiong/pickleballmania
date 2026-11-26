@@ -20,6 +20,9 @@ import { GameSimulation, type SimPlayer } from './GameSimulation'
 import { solveShot } from './shot'
 
 export const COACH_ID = 'coach'
+export const COACH_NAME = 'Coach Erwin'
+/** Always the same person (see ATHLETES). */
+export const COACH_LOOK = 'm2'
 
 /** Time to get ready before the coach serves or the machine feeds (seconds). */
 const READY_SECONDS = 1.3
@@ -73,7 +76,7 @@ export class PracticeSimulation extends GameSimulation {
   override addPlayer(id: string, nickname: string): SimPlayer | null {
     const player = super.addPlayer(id, nickname)
     if (!player) return null
-    super.addPlayer(COACH_ID, 'Coach')
+    super.addPlayer(COACH_ID, COACH_NAME)
     super.setReady(COACH_ID, true)
     super.setReady(id, true)
     return player

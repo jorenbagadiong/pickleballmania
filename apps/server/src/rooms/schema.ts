@@ -11,6 +11,8 @@ export const PlayerState = schema(
     /** Position within the team (0 or 1). */
     spot: t.uint8().default(0),
     nickname: t.string().default(''),
+    /** The athlete they chose to play as ('' = picked by name on each screen). */
+    look: t.string().default(''),
     /** Position (mm), speed (mm/s) and facing (1e-4 rad): see WIRE. */
     x: t.int16().default(0),
     z: t.int16().default(0),

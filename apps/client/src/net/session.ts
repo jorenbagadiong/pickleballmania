@@ -3,6 +3,7 @@ import {
   ClientMsg,
   FIXED_DT,
   type FxMessage,
+  type AthleteId,
   type GameMode,
   type InputFrame,
   PRACTICE_DRILLS,
@@ -22,7 +23,7 @@ import {
   WIRE,
   fromWire,
 } from '@pickleball/shared'
-import { type ChatLine, type PlayerSummary, initialUiState, useUi } from '../state/store'
+import { type ChatLine, type PlayerSummary, initialUiState, saveLook, useUi } from '../state/store'
 import { SERVER_URL } from './config'
 import { LocalPrediction } from './prediction'
 import { type PlayerSnap, type Snapshot, SnapshotBuffer, type WorldSample } from './snapshots'
@@ -32,6 +33,7 @@ interface PlayerView {
   slot: number
   spot: number
   nickname: string
+  look: string
   x: number
   z: number
   vx: number
@@ -212,6 +214,7 @@ function readPlayers(court: CourtView): {
       ready: p.ready,
       connected: p.connected,
       streak: p.streak,
+      look: p.look ?? '',
     })
   })
   summary.sort((a, z) => a.slot - z.slot || a.spot - z.spot)
@@ -504,7 +507,10 @@ async function tryRejoin(): Promise<void> {
     } catch (err) {
       // The server has let go of the old place (or can't be reached).
       if (!looksOffline(err))
-        joined = await client.joinById(target.code, { nickname: target.nickname })
+        joined = await client.joinById(target.code, {
+          nickname: target.nickname,
+          look: useUi.getState().myLook,
+        })
       else throw err
     }
     if (rejoining !== target) {
@@ -557,14 +563,16 @@ export async function createRoom(
   mode: GameMode,
   tournament = false,
 ): Promise<boolean> {
-  const ok = await connect(() => client.create(ROOM_NAME, { nickname, mode, tournament }))
+  const ok = await connect(() =>
+    client.create(ROOM_NAME, { nickname, mode, tournament, look: useUi.getState().myLook }),
+  )
   // On a slow connection "New room" may be pressed before the first update says this.
   if (ok && lastUiKey === '') useUi.setState({ mode })
   return ok
 }
 
 export function joinRoom(code: string, nickname: string): Promise<boolean> {
-  return connect(() => client.joinById(code, { nickname }))
+  return connect(() => client.joinById(code, { nickname, look: useUi.getState().myLook }))
 }
 
 /** After a page refresh, try to take back the seat we had (within the reconnect window). */
@@ -611,7 +619,9 @@ export async function startPractice(nickname = myNickname()): Promise<void> {
   const { roomCode, practice } = useUi.getState()
   const returnTo = practice ? null : roomCode
   await leaveRoom()
-  const ok = await connect(() => client.create(ROOM_NAME, { nickname, practice: true }))
+  const ok = await connect(() =>
+    client.create(ROOM_NAME, { nickname, practice: true, look: useUi.getState().myLook }),
+  )
   if (ok) useUi.setState({ returnTo })
 }
 
@@ -648,6 +658,13 @@ export function sendSwing(
   const seen = focused().renderServerTime(nowSeconds())
   const viewTick = seen === null ? undefined : Math.round(seen / FIXED_DT)
   room?.send(ClientMsg.swing, { ax, az, power, spin, jump, viewTick })
+}
+
+/** Plays as this athlete from now on ('' = picked by name), here and next time. */
+export function chooseLook(look: AthleteId | ''): void {
+  saveLook(look)
+  useUi.setState({ myLook: look })
+  room?.send(ClientMsg.look, { look })
 }
 
 export function sendServe(ax: number, az: number, spin: number): void {

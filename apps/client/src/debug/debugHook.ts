@@ -9,6 +9,7 @@ interface PlayerView {
   slot: number
   spot: number
   nickname: string
+  look: string
   x: number
   z: number
   ready: boolean
@@ -42,6 +43,7 @@ export function installDebugHook(): void {
             slot: pv.slot,
             spot: pv.spot,
             nickname: pv.nickname,
+            look: pv.look,
             x: fromWire(pv.x, WIRE.position),
             z: fromWire(pv.z, WIRE.position),
             ready: pv.ready,

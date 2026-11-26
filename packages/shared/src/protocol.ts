@@ -82,7 +82,17 @@ export const ClientMsg = {
   chat: 'chat',
   practice: 'practice',
   tournament: 'tournament',
+  look: 'look',
 } as const
+
+/** The athletes people can play as (see tools/characters); '' means picked by name. */
+export const ATHLETES = ['m1', 'm2', 'm3', 'f1', 'f2', 'f3'] as const
+export type AthleteId = (typeof ATHLETES)[number]
+
+/** A chosen athlete, or '' (picked by name) for anything else. */
+export function parseLook(input: unknown): AthleteId | '' {
+  return ATHLETES.find((a) => a === input) ?? ''
+}
 
 /** Server -> client message types. */
 export const ServerMsg = {
@@ -185,6 +195,8 @@ export interface JoinOptions {
   practice?: boolean
   /** Only used when creating a room: a tournament. */
   tournament?: boolean
+  /** Which athlete to play as ('' or missing: picked by name). */
+  look?: string
 }
 
 /** One-shot visual events broadcast by the server. */

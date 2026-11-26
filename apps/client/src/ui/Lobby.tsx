@@ -4,6 +4,7 @@ import { TEAM_NAMES, playerColor, teamColor } from '../game/colors'
 import { inviteUrl } from '../net/config'
 import { leaveRoom, newRoom, sendReady, sendSeat, sendSwitchTeam } from '../net/session'
 import { type PlayerSummary, useUi } from '../state/store'
+import { CharacterPicker } from './CharacterPicker'
 import { MiniBar, MiniReady, MinimizeButton } from './Minimize'
 import { copyText } from './copy'
 
@@ -169,6 +170,15 @@ export function Lobby() {
             )
           })}
         </div>
+
+        {me && (
+          <div className="mb-4">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Your character
+            </div>
+            <CharacterPicker small />
+          </div>
+        )}
 
         {phase === 'waiting' ? (
           <p className="mb-4 text-center text-sm text-slate-400">

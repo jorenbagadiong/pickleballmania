@@ -22,6 +22,7 @@ interface PlayerView {
   slot: number
   spot: number
   nickname: string
+  look: string
   x: number
   z: number
   connected: boolean
@@ -326,12 +327,30 @@ describe('spectator chat', () => {
   }, 20000)
 })
 
+describe('choosing a character', () => {
+  it('is seen by everyone, from joining and when changed', async () => {
+    const ra = await new Client(URL).create(ROOM_NAME, { nickname: 'Ann', look: 'f3' })
+    const rb = await new Client(URL).joinById(ra.roomId, { nickname: 'Bob', look: 'not-a-look' })
+    const lookOf = (r: Room, name: string) => players(r).find((p) => p.nickname === name)?.look
+    await waitFor(() => lookOf(rb, 'Ann') === 'f3', 'Bob sees Ann as she chose')
+    // Nonsense: picked by name.
+    await waitFor(() => lookOf(ra, 'Bob') === '', 'Ann sees Bob, picked by name')
+
+    rb.send(ClientMsg.look, { look: 'm1' })
+    await waitFor(() => lookOf(ra, 'Bob') === 'm1', 'Ann sees Bob change')
+    rb.send(ClientMsg.look, { look: '' })
+    await waitFor(() => lookOf(ra, 'Bob') === '', 'back to picked by name')
+    for (const r of [rb, ra]) await r.leave(true)
+  }, 20000)
+})
+
 describe('training', () => {
   it('is a private court: not listed, one person, and works without anyone else', async () => {
     const ra = await new Client(URL).create(ROOM_NAME, { nickname: 'Ann', practice: true })
     const drill = () => (ra.state as unknown as { drill: string; level: string }).drill
     await waitFor(() => drill() === 'machine' && state(ra).players.size === 2, 'training started')
-    expect(players(ra).map((p) => p.nickname)).toEqual(['Ann', 'Coach'])
+    expect(players(ra).map((p) => p.nickname)).toEqual(['Ann', 'Coach Erwin'])
+    expect(players(ra).find((p) => p.nickname === 'Coach Erwin')?.look).toBe('m2')
     await waitFor(() => state(ra).phase === 'rally', 'the machine feeds a ball')
 
     const { rooms } = (await (await fetch(`${URL}/rooms`)).json()) as { rooms: RoomSummary[] }

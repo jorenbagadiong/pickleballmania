@@ -10,6 +10,7 @@ interface PlayerView {
   id: string
   slot: number
   nickname: string
+  look: string
   x: number
   z: number
   spot: number
@@ -567,6 +568,34 @@ test('New room opens a fresh room with a new code, in one click from the lobby',
   await expect.poll(async () => (await player(alice.page, 'Alice'))?.slot).toBe(0)
   expect(alice.errors, alice.errors.join('\n')).toEqual([])
   await alice.context.close()
+})
+
+test('everyone picks a character, sees the others as they chose, and can change in the lobby', async ({
+  browser,
+}) => {
+  const alice = await openPlayer(browser, '/?e2e=1')
+  await alice.page.getByTestId('nickname').fill('Alice')
+  await alice.page.getByTestId('look-f2').click()
+  await expect(alice.page.getByTestId('look-f2')).toHaveAttribute('aria-checked', 'true')
+  await alice.page.getByTestId('create-room').click()
+  const code = (await alice.page.getByTestId('room-code').textContent()) ?? ''
+
+  const bob = await openPlayer(browser, `/?room=${code}&e2e=1`)
+  await bob.page.getByTestId('nickname').fill('Bob')
+  await bob.page.getByTestId('look-m3').click()
+  await bob.page.getByTestId('join-room').click()
+  await expect.poll(async () => (await player(bob.page, 'Alice'))?.look).toBe('f2')
+  await expect.poll(async () => (await player(alice.page, 'Bob'))?.look).toBe('m3')
+
+  // Changed in the lobby: everyone sees it, and it is remembered for next time.
+  await bob.page.getByTestId('look-m1').click()
+  await expect.poll(async () => (await player(alice.page, 'Bob'))?.look).toBe('m1')
+  expect(await bob.page.evaluate(() => localStorage.getItem('pickleball.look'))).toBe('m1')
+  await bob.page.reload()
+  await expect.poll(async () => (await player(alice.page, 'Bob'))?.look).toBe('m1')
+
+  for (const p of [alice, bob]) expect(p.errors, p.errors.join('\n')).toEqual([])
+  for (const p of [alice, bob]) await p.context.close()
 })
 
 test('a room with an open seat can be joined from the list, and spectators can take a freed seat', async ({

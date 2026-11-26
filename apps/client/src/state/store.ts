@@ -1,11 +1,13 @@
-import type {
-  GameMode,
-  Phase,
-  PracticeDrill,
-  PracticeLevel,
-  Slot,
-  Spot,
-  TournamentView,
+import {
+  type AthleteId,
+  type GameMode,
+  type Phase,
+  type PracticeDrill,
+  type PracticeLevel,
+  type Slot,
+  type Spot,
+  type TournamentView,
+  parseLook,
 } from '@pickleball/shared'
 import { create } from 'zustand'
 import { spectatorViews } from '../camera/views'
@@ -39,6 +41,24 @@ export interface PracticeShot {
 export type CameraDistance = 'close' | 'normal' | 'far'
 export const CAMERA_DISTANCES: readonly CameraDistance[] = ['close', 'normal', 'far']
 const CAMERA_KEY = 'pb3d.camera'
+
+const LOOK_KEY = 'pickleball.look'
+
+function savedLook(): AthleteId | '' {
+  try {
+    return parseLook(localStorage.getItem(LOOK_KEY))
+  } catch {
+    return ''
+  }
+}
+
+export function saveLook(look: AthleteId | ''): void {
+  try {
+    localStorage.setItem(LOOK_KEY, look)
+  } catch {
+    // Private browsing: it just won't be remembered.
+  }
+}
 
 function startQuality(): Quality {
   if (typeof window === 'undefined') return fullQuality(1)
@@ -77,6 +97,8 @@ export interface PlayerSummary {
   connected: boolean
   /** Rallies won in a row. */
   streak: number
+  /** The athlete they chose ('' = picked by name). */
+  look: string
 }
 
 /**
@@ -154,6 +176,8 @@ export interface UiState {
   dpr: number
   shadows: boolean
   crowd: boolean
+  /** The athlete I play as ('' = picked by name), remembered on this computer. */
+  myLook: AthleteId | ''
 }
 
 export const initialUiState: UiState = {
@@ -198,6 +222,7 @@ export const initialUiState: UiState = {
   jitterMs: 0,
   fps: null,
   ...startQuality(),
+  myLook: savedLook(),
 }
 
 export const useUi = create<UiState>(() => initialUiState)

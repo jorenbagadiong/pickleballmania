@@ -29,7 +29,7 @@ swipe the mouse left or right and swing (or serve) during the swipe to curve the
 way, more the faster you swipe; it still goes to where you aimed before the swipe.
 
 **Training:** _Training — practice alone_ on the start screen (or _Train meanwhile_ while
-watching a game) opens a private court with a coach: ball machine, serves or rally, in three
+watching a game) opens a private court with Coach Erwin: ball machine, serves or rally, in three
 levels. It shows your timing, curve and landing after every shot, and _Back to room_ returns
 to the game you were watching.
 

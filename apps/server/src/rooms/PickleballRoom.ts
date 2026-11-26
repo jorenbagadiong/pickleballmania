@@ -17,10 +17,11 @@ import {
   teamSizeFor,
   sanitizeChat,
   sanitizeNickname,
+  parseLook,
   toWire,
 } from '@pickleball/shared'
 import { GameSimulation } from '../simulation/GameSimulation'
-import { PracticeSimulation } from '../simulation/PracticeSimulation'
+import { COACH_ID, COACH_LOOK, PracticeSimulation } from '../simulation/PracticeSimulation'
 import { TournamentRunner } from '../tournament/TournamentRunner'
 import { releaseRoomCode, reserveRoomCode } from './roomCodes'
 import { listRoom, unlistRoom } from './roomDirectory'
@@ -54,6 +55,8 @@ export class PickleballRoom extends Room<{ state: GameState }> {
   /** People whose connection dropped but may come back. */
   private readonly dropped = new Set<string>()
   private readonly chatTimes = new Map<string, number[]>()
+  /** The athlete each person chose, by session ('' = picked by name). */
+  private readonly looks = new Map<string, string>()
 
   override onCreate(options: RoomCreateOptions & Record<string, unknown>): void {
     this.allowedOrigins = Array.isArray(options.allowedOrigins) ? options.allowedOrigins : []
@@ -76,9 +79,15 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     // Not in Colyseus matchmaking; people join by code, invite link or the room list.
     void this.setPrivate(true)
     if (training) {
+      this.looks.set(COACH_ID, COACH_LOOK)
       this.onMessage(ClientMsg.practice, (_client, msg: unknown) => training.setDrill(msg))
     } else this.list(mode)
 
+    // Anyone may change who they play as, at any time; everyone sees it.
+    this.onMessage(ClientMsg.look, (client, msg: unknown) => {
+      this.looks.set(client.sessionId, parseLook((msg as { look?: unknown } | null)?.look))
+      this.syncState()
+    })
     this.onMessage(ClientMsg.input, (client, msg: unknown) =>
       this.courtOf(client.sessionId).queueInputs(client.sessionId, msg),
     )
@@ -148,8 +157,9 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     throw new ServerError(403, 'This page is not allowed to join games on this server')
   }
 
-  override onJoin(client: Client, options: { nickname?: unknown } = {}): void {
+  override onJoin(client: Client, options: { nickname?: unknown; look?: unknown } = {}): void {
     const nickname = sanitizeNickname(options.nickname)
+    this.looks.set(client.sessionId, parseLook(options.look))
     if (this.runner) {
       this.runner.join(client.sessionId, nickname)
       this.syncState()
@@ -228,6 +238,7 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     else this.sim.removePlayer(client.sessionId)
     this.state.spectators.delete(client.sessionId)
     this.chatTimes.delete(client.sessionId)
+    this.looks.delete(client.sessionId)
     this.syncState()
   }
 
@@ -258,7 +269,7 @@ export class PickleballRoom extends Room<{ state: GameState }> {
       s.drill = sim.drill
       s.level = sim.level
     }
-    syncCourt(s, sim)
+    syncCourt(s, sim, this.looks)
     if (!this.runner) return
     // Extra courts appear when the tournament needs them.
     const extra = this.runner.courtCount - 1
@@ -267,14 +278,18 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     for (let i = 0; i < extra; i++) {
       const court = s.courts[i]
       const simulation = this.courts[i + 1]
-      if (court && simulation) syncCourt(court, simulation)
+      if (court && simulation) syncCourt(court, simulation, this.looks)
     }
     this.syncTournament(this.runner)
   }
 }
 
 /** Copies one simulation into a court's state. */
-function syncCourt(s: GameState | CourtState, sim: GameSimulation): void {
+function syncCourt(
+  s: GameState | CourtState,
+  sim: GameSimulation,
+  looks: ReadonlyMap<string, string>,
+): void {
   s.phase = sim.phase
   s.servingSlot = sim.servingSlot
   s.serverId = sim.serverId ?? ''
@@ -301,6 +316,7 @@ function syncCourt(s: GameState | CourtState, sim: GameSimulation): void {
     }
     ps.slot = p.slot
     ps.nickname = p.nickname
+    ps.look = looks.get(id) ?? ''
     ps.x = toWire(p.x, WIRE.position)
     ps.z = toWire(p.z, WIRE.position)
     ps.vx = toWire(p.vx, WIRE.runSpeed)

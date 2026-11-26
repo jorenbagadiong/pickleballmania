@@ -11,6 +11,7 @@ import { type ReactNode, useState } from 'react'
 import { inviteUrl } from '../net/config'
 import { leaveRoom, sendReady, sendSeat, sendTournament } from '../net/session'
 import { useUi } from '../state/store'
+import { CharacterPicker } from './CharacterPicker'
 import { MiniBar, MiniReady, MinimizeButton } from './Minimize'
 import { copyText } from './copy'
 
@@ -128,6 +129,13 @@ function SignUp({ t }: { t: TournamentView }) {
         >
           {copied ? 'Link copied!' : 'Copy invite link'}
         </button>
+      </div>
+
+      <div className="mb-3">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Your character
+        </div>
+        <CharacterPicker small />
       </div>
 
       <div className="mb-1 text-sm font-semibold">

@@ -12,6 +12,7 @@ import { SERVER_URL } from '../net/config'
 import { roomStatus, useRoomList } from '../net/rooms'
 import { createRoom, joinRoom, startPractice } from '../net/session'
 import { useUi } from '../state/store'
+import { CharacterPicker } from './CharacterPicker'
 
 const NICK_KEY = 'pb3d.nickname'
 
@@ -128,6 +129,11 @@ export function StartScreen() {
           autoFocus
           onChange={(e) => setNickname(e.target.value)}
         />
+
+        <div className="mb-1 text-sm font-medium text-slate-300">Your character</div>
+        <div className="mb-5">
+          <CharacterPicker />
+        </div>
 
         {!invited && (
           <>
