@@ -111,7 +111,28 @@ export const ServerMsg = {
   fx: 'fx',
   /** Sent to one player only: their held curves (Q, E, the right button) are on. */
   cheats: 'cheats',
+  /**
+   * TEZUKA ZONE diagnostics, sent only to the secret athlete, and only when the server
+   * runs with PICKLEBALL_ZONE_DEBUG=1 (see ZoneDebug).
+   */
+  zoneDebug: 'zoneDebug',
 } as const
+
+/** What the TEZUKA ZONE is doing (developer diagnostics; never needed to play). */
+export interface ZoneDebug {
+  active: boolean
+  reason: string
+  target: { x: number; y: number; z: number } | null
+  timeToContact: number
+  steerX: number
+  steerZ: number
+  /** The pull the plan asked for, before limits (m/s²). */
+  wanted: number
+  /** Speed added or taken so far this shot (m/s). */
+  spent: number
+  preset: string
+  tick: number
+}
 
 /** The secret name (in any capitals) that, from the host's own computer, turns on held curves. */
 export function isCheaterName(nickname: string): boolean {

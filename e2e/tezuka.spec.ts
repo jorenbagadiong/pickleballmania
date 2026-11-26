@@ -8,6 +8,13 @@ import { E2E_DEV_KEY } from '../playwright.config'
 
 const SECRET_LOOK = 'x1'
 
+// Older tests in the suite close their browser windows only when they pass; one that
+// failed leaves its pages open, still drawing (in software here) and still connected.
+// Start from a clean browser so those leftovers can't disturb these tests.
+test.beforeEach(async ({ browser }) => {
+  for (const context of browser.contexts()) await context.close()
+})
+
 interface Seen {
   phase: string
   players: { nickname: string; look: string }[]

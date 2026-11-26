@@ -2,7 +2,14 @@ import { WIRE, fromWire } from '@pickleball/shared'
 import { Vector3 } from 'three'
 import { frame } from '../game/frame'
 import { SERVER_URL } from '../net/config'
-import { focusCourt, focusedCourt, latestState, prediction } from '../net/session'
+import {
+  focusCourt,
+  focusedCourt,
+  latestState,
+  latestZoneDebug,
+  prediction,
+  startBallLog,
+} from '../net/session'
 import { useUi } from '../state/store'
 
 interface PlayerView {
@@ -71,11 +78,19 @@ export function installDebugHook(): void {
             vx: fromWire(b.vx, WIRE.ballSpeed),
             vy: fromWire(b.vy, WIRE.ballSpeed),
             vz: fromWire(b.vz, WIRE.ballSpeed),
+            steerX: fromWire((b as { steerX?: number }).steerX ?? 0, WIRE.steer),
+            steerZ: fromWire((b as { steerZ?: number }).steerZ ?? 0, WIRE.steer),
+            bounced: (b as { bounced?: boolean }).bounced ?? false,
+            mustBounce: (b as { mustBounce?: boolean }).mustBounce ?? false,
             visible: b.visible,
             held: b.held,
           },
         }
       },
+      /** TEZUKA ZONE diagnostics (the secret athlete only, with PICKLEBALL_ZONE_DEBUG=1). */
+      zone: () => latestZoneDebug(),
+      /** Every ball state decoded from now on, by server tick (court 1). */
+      ballLog: () => Object.fromEntries(startBallLog()),
       /** Where the camera is, and which court is in focus. */
       camera: () => {
         const p = frame.camera?.position

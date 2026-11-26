@@ -51,6 +51,7 @@ import {
 } from '@pickleball/shared'
 import { RallyTracker, type RallyOutcome, explain } from '../rules/rally'
 import { type Shot, type Vec3, solveShot } from './shot'
+import { TezukaZone, type ZonePlayer, zoneEligible } from './zone'
 
 export interface Swing {
   /** Seconds since the swing started. */
@@ -221,6 +222,12 @@ export class GameSimulation {
   protected phaseTimer = 0
   protected readonly rally = new RallyTracker()
   private readonly history: HistoryEntry[] = []
+  /**
+   * Players with the TEZUKA ZONE (the room's authorized secret athletes; empty unless the
+   * room allows them). Only those seated, connected and receiving the shot count.
+   */
+  zoneIds: ReadonlySet<string> = new Set()
+  readonly zone = new TezukaZone()
   protected readonly fx: FxEvent[] = []
   private readonly ballEvents: BallEvent[] = []
 
@@ -368,6 +375,8 @@ export class GameSimulation {
     const p = this.players.get(id)
     if (!p) return
     p.connected = connected
+    // The rally stops here (paused, then a fresh serve): nothing goes on pulling the ball.
+    if (!connected) this.zone.reset(this.ball, 'disconnected')
     p.queue.length = 0
     // A reconnecting client resumes numbering from the last *applied* input.
     p.lastQueuedSeq = p.lastSeq
@@ -558,9 +567,29 @@ export class GameSimulation {
     this.ball.vy = 0
     this.ball.vz = 0
     this.ball.curve = 0
+    this.zone.reset(this.ball, 'serving')
+  }
+
+  /** The zone player the ball in flight is for, if any (the nearest, should there be two). */
+  private zonePlayer(): ZonePlayer | null {
+    let best: SimPlayer | null = null
+    let nearest = Infinity
+    for (const id of this.zoneIds) {
+      const p = this.players.get(id)
+      if (!p || !zoneEligible(p, this.rally)) continue
+      const d = Math.hypot(p.x - this.ball.x, p.z - this.ball.z)
+      if (d < nearest) {
+        nearest = d
+        best = p
+      }
+    }
+    return best
   }
 
   private stepRally(dt: number): void {
+    if (this.zoneIds.size > 0) {
+      this.zone.step(this.ball, this.zonePlayer(), this.rally, this.rallyShots, this.tick)
+    }
     stepBall(this.ball, dt, this.ballEvents)
 
     for (const e of this.ballEvents) {
@@ -621,10 +650,11 @@ export class GameSimulation {
   private gettingCloser(p: SimPlayer, distance: number, swingTime: number): boolean {
     if (swingTime + FIXED_DT > SWING_ACTIVE_WINDOW) return false
     const b = this.ball
+    const ax = (b.curve ?? 0) + (b.steerX ?? 0)
     const next = {
-      x: b.x + b.vx * FIXED_DT + 0.5 * (b.curve ?? 0) * FIXED_DT * FIXED_DT,
+      x: b.x + b.vx * FIXED_DT + 0.5 * ax * FIXED_DT * FIXED_DT,
       y: b.y + b.vy * FIXED_DT - 0.5 * GRAVITY * FIXED_DT * FIXED_DT,
-      z: b.z + b.vz * FIXED_DT,
+      z: b.z + b.vz * FIXED_DT + 0.5 * (b.steerZ ?? 0) * FIXED_DT * FIXED_DT,
     }
     if (this.rally.bounced && next.y <= BALL_RADIUS) return false // about to bounce twice
     const d = this.inReach(p, next)
@@ -757,6 +787,8 @@ export class GameSimulation {
     this.ball.held = false
     this.ball.visible = true
     this.history.length = 0
+    // A new shot: nothing pulled toward whoever just hit it.
+    this.zone.reset(this.ball, 'new shot')
   }
 
   /** Whether the ball will bounce within the player's reach in the next few moments. */
@@ -767,9 +799,9 @@ export class GameSimulation {
     return (
       t <= seconds &&
       this.inReach(p, {
-        x: b.x + b.vx * t + 0.5 * (b.curve ?? 0) * t * t,
+        x: b.x + b.vx * t + 0.5 * ((b.curve ?? 0) + (b.steerX ?? 0)) * t * t,
         y: BALL_RADIUS,
-        z: b.z + b.vz * t,
+        z: b.z + b.vz * t + 0.5 * (b.steerZ ?? 0) * t * t,
       }) !== null
     )
   }
@@ -801,6 +833,8 @@ export class GameSimulation {
     const { winner } = outcome
     const hitter = this.players.get(this.lastHitId)?.nickname ?? 'A player'
     const text = explain(outcome.code, hitter, this.teamName(otherSlot(winner)))
+    // The point is decided: the ball just falls as it would.
+    this.zone.reset(this.ball, 'rally over')
     this.phase = 'pointOver'
     this.phaseTimer = this.pauseAfterRally
     let ignited = ''
@@ -899,6 +933,7 @@ export class GameSimulation {
     this.receiverId = null
     this.ball.visible = false
     this.ball.held = false
+    this.zone.reset(this.ball, 'new game')
   }
 
   private startGame(): void {

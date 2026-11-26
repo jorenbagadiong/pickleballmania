@@ -17,6 +17,7 @@ import {
   type Spot,
   type TournamentMessage,
   type TournamentView,
+  type ZoneDebug,
   movementBounds,
   parseGameMode,
   serveParityFor,
@@ -77,6 +78,8 @@ interface CourtView {
     vy: number
     vz: number
     curve: number
+    steerX?: number
+    steerZ?: number
     visible: boolean
     held: boolean
     bounced: boolean
@@ -235,6 +238,8 @@ function readCourt(court: CourtView, tick: number): Snapshot | null {
       vy: fromWire(b.vy, WIRE.ballSpeed),
       vz: fromWire(b.vz, WIRE.ballSpeed),
       curve: fromWire(b.curve, WIRE.curve),
+      steerX: fromWire(b.steerX ?? 0, WIRE.steer),
+      steerZ: fromWire(b.steerZ ?? 0, WIRE.steer),
       visible: b.visible,
       held: b.held,
       bounced: b.bounced,
@@ -254,10 +259,25 @@ function chooseFocus(courts: CourtView[], me: string): number {
   return first >= 0 ? first : 0
 }
 
+/**
+ * Every decoded ball state of court 1, by server tick: only kept once the read-only
+ * debug hook (`?e2e`) asks for it, to compare what two browsers saw.
+ */
+let ballLog: Map<number, WorldSample['ball']> | null = null
+
+export function startBallLog(): Map<number, WorldSample['ball']> {
+  ballLog ??= new Map()
+  return ballLog
+}
+
 function onState(r: Room, state: StateView): void {
   if (!state.players || !state.ball) return
   const now = nowSeconds()
   const courts = courtsOf(state)
+  if (ballLog) {
+    const b = readCourt(state, state.tick)?.ball
+    if (b) ballLog.set(state.tick, { ...b })
+  }
 
   courtSnapshots.length = Math.max(1, Math.min(courtSnapshots.length, courts.length))
   courts.forEach((c, i) => {
@@ -403,6 +423,9 @@ function attach(r: Room): void {
     for (const cb of fxListeners) cb(e)
   })
   r.onMessage(ServerMsg.cheats, (m: { on?: unknown }) => useUi.setState({ cheats: m.on === true }))
+  r.onMessage(ServerMsg.zoneDebug, (m: ZoneDebug) => {
+    zoneDebug = m
+  })
   r.onDrop(() => useUi.setState({ status: 'reconnecting' }))
   r.onReconnect(() => {
     saveSession(r)
@@ -546,6 +569,13 @@ if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void tryRejoin()
   })
+}
+
+/** The TEZUKA ZONE's latest diagnostics (only sent with PICKLEBALL_ZONE_DEBUG=1). */
+let zoneDebug: ZoneDebug | null = null
+
+export function latestZoneDebug(): ZoneDebug | null {
+  return zoneDebug
 }
 
 /**

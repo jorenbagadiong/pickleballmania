@@ -20,9 +20,11 @@ import {
   isCheaterName,
   parseLook,
   SECRET_LOOK,
+  type ZoneDebug,
   toWire,
 } from '@pickleball/shared'
 import { GameSimulation } from '../simulation/GameSimulation'
+import { parseZonePreset } from '../simulation/zone'
 import { COACH_ID, COACH_LOOK, PracticeSimulation } from '../simulation/PracticeSimulation'
 import { TournamentRunner } from '../tournament/TournamentRunner'
 import { type JoinAuth, devKeyMatches, grantsTezuka } from './devAuth'
@@ -86,6 +88,14 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     } else this.courts = [this.sim]
     // Never in a tournament: nobody there agreed to play against it.
     this.devPerks = training !== null || (options.devPerks === true && !this.runner)
+    if (this.devPerks) {
+      // The secret athletes' TEZUKA ZONE, as strong as the server is set up for.
+      const preset = parseZonePreset(process.env.PICKLEBALL_ZONE_PRESET)
+      for (const court of this.courts) {
+        court.zoneIds = this.tezukas
+        court.zone.preset = preset
+      }
+    }
     this.code = reserveRoomCode()
     this.roomId = this.code
     this.state.roomCode = this.code
@@ -139,7 +149,24 @@ export class PickleballRoom extends Room<{ state: GameState }> {
       })
       this.runner?.step60(ctx.dt)
       this.syncState()
+      if (this.zoneDebug && this.sim.tick % 4 === 0) this.sendZoneDebug()
     }, TICK_RATE)
+  }
+
+  /** Developer diagnostics for the secret athletes (ZoneDebug), never for anyone else. */
+  private readonly zoneDebug = process.env.PICKLEBALL_ZONE_DEBUG === '1'
+
+  private sendZoneDebug(): void {
+    for (const client of this.clients) {
+      if (!this.tezukas.has(client.sessionId)) continue
+      const court = this.courtOf(client.sessionId)
+      const msg: ZoneDebug = {
+        ...court.zone.diagnostics,
+        preset: court.zone.preset.name,
+        tick: court.tick,
+      }
+      client.send(ServerMsg.zoneDebug, msg)
+    }
   }
 
   /** The court someone is playing on (court 1 for everyone else). */
@@ -379,6 +406,8 @@ function syncCourt(
   sb.vy = toWire(b.vy, WIRE.ballSpeed)
   sb.vz = toWire(b.vz, WIRE.ballSpeed)
   sb.curve = toWire(b.curve ?? 0, WIRE.curve)
+  sb.steerX = toWire(b.steerX ?? 0, WIRE.steer)
+  sb.steerZ = toWire(b.steerZ ?? 0, WIRE.steer)
   sb.visible = b.visible
   sb.held = b.held
   sb.bounced = sim.ballBounced

@@ -2,7 +2,7 @@
  * Real-network integration test: boots the actual Colyseus game server on a
  * local port and connects independent SDK clients over WebSocket.
  */
-import type { Server } from '@colyseus/core'
+import { type Server, matchMaker } from '@colyseus/core'
 import { Client, type Room } from '@colyseus/sdk'
 import {
   CHAT_MAX_LENGTH,
@@ -510,6 +510,48 @@ describe('the secret developer athlete', () => {
     expect(copy.told()).toBe(0)
     expect(lookOf(bob, 'Tezuka')).toBe('')
     for (const r of [copy.room, bob]) await r.leave(true)
+  }, 20000)
+
+  /** The zone holders of each court of a room (read from the server itself). */
+  const zoneOf = (room: Room): { ids: string[]; preset: string }[] => {
+    const live = matchMaker.getLocalRoomById(room.roomId) as unknown as {
+      courts: { zoneIds: ReadonlySet<string>; zone: { preset: { name: string } } }[]
+    }
+    return live.courts.map((c) => ({ ids: [...c.zoneIds], preset: c.zone.preset.name }))
+  }
+
+  it('gives the TEZUKA ZONE to the secret athlete on every court of a room that allows it', async () => {
+    const t = await counted(
+      new Client(URL).create(ROOM_NAME, { nickname: 'Tezuka', devPerks: true, devKey: KEY }),
+    )
+    const bob = await new Client(URL).joinById(t.room.roomId, { nickname: 'Bob' })
+    await waitFor(() => t.told() === 1, 'granted')
+    expect(zoneOf(t.room)).toEqual([{ ids: [t.room.sessionId], preset: 'anime' }])
+    // Leaving clears it.
+    await t.room.leave(true)
+    await waitFor(() => zoneOf(bob)[0]!.ids.length === 0, 'zone gone with the player')
+    await bob.leave(true)
+  })
+
+  it('no zone in a room not allowing it, nor in a tournament; training has it', async () => {
+    const casual = await new Client(URL).create(ROOM_NAME, { nickname: 'Tezuka', devKey: KEY })
+    const cup = await new Client(URL).create(ROOM_NAME, {
+      nickname: 'Tezuka',
+      devPerks: true,
+      devKey: KEY,
+      tournament: true,
+    })
+    await settle()
+    expect(zoneOf(casual).every((c) => c.ids.length === 0)).toBe(true)
+    expect(zoneOf(cup).length).toBeGreaterThan(1)
+    expect(zoneOf(cup).every((c) => c.ids.length === 0)).toBe(true)
+    const train = await new Client(URL).create(ROOM_NAME, {
+      nickname: 'Tezuka',
+      practice: true,
+      devKey: KEY,
+    })
+    await waitFor(() => zoneOf(train)[0]!.ids.includes(train.sessionId), 'training zone')
+    for (const r of [casual, cup, train]) await r.leave(true)
   }, 20000)
 
   it('leaves the cheater exactly as before', async () => {

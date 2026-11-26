@@ -15,6 +15,13 @@ export interface BallBody {
   vz: number
   /** Sideways (x) acceleration from sidespin, in m/s². */
   curve?: number
+  /**
+   * Ground-plane steering by the TEZUKA ZONE (m/s²; see the server's zone.ts). Kept
+   * apart from `curve`: it is no spin, so it never kicks a bounce or decays with one.
+   * Only the server sets it; clients integrate it to draw the ball between updates.
+   */
+  steerX?: number
+  steerZ?: number
 }
 
 export type BallEvent =
@@ -50,9 +57,19 @@ export function stepBall(b: BallBody, dt: number, events: BallEvent[]): void {
   const airborne = py > BALL_RADIUS + 1e-4 || b.vy !== 0
 
   const curve = b.curve ?? 0
-  b.x += b.vx * dt + 0.5 * curve * dt * dt
-  b.vx += curve * dt
-  b.z += b.vz * dt
+  const steerX = b.steerX ?? 0
+  const steerZ = b.steerZ ?? 0
+  if (steerX === 0 && steerZ === 0) {
+    b.x += b.vx * dt + 0.5 * curve * dt * dt
+    b.vx += curve * dt
+    b.z += b.vz * dt
+  } else {
+    const ax = curve + steerX
+    b.x += b.vx * dt + 0.5 * ax * dt * dt
+    b.vx += ax * dt
+    b.z += b.vz * dt + 0.5 * steerZ * dt * dt
+    b.vz += steerZ * dt
+  }
   b.y += b.vy * dt - 0.5 * GRAVITY * dt * dt
   b.vy -= GRAVITY * dt
 
@@ -70,6 +87,8 @@ export function stepBall(b: BallBody, dt: number, events: BallEvent[]): void {
       b.vz = -b.vz * NET_DAMPING
       b.vx *= 0.4
       b.curve = 0
+      b.steerX = 0
+      b.steerZ = 0
       b.vy = Math.min(b.vy, 0) * 0.3
       events.push({ type: 'net', x: cx, y: cy, z: 0 })
     }
@@ -99,6 +118,8 @@ export function stepBall(b: BallBody, dt: number, events: BallEvent[]): void {
     if (b.vy === 0) {
       const k = Math.max(0, 1 - ROLL_DAMPING * dt)
       b.curve = 0
+      b.steerX = 0
+      b.steerZ = 0
       b.vx *= k
       b.vz *= k
     }

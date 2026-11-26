@@ -50,6 +50,8 @@ export default defineConfig({
         GAME_HOST: '127.0.0.1',
         GAME_SERVER_PORT: String(SERVER_PORT),
         PICKLEBALL_DEV_KEY: E2E_DEV_KEY,
+        // TEZUKA ZONE diagnostics for the secret athlete's own browser (e2e/tezukaZone.spec.ts).
+        PICKLEBALL_ZONE_DEBUG: '1',
       },
       reuseExistingServer: false,
       timeout: 30_000,

@@ -12,6 +12,8 @@ export const WIRE = {
   ballSpeed: 100,
   /** Centimeters per second², the sideways pull of spin. */
   curve: 100,
+  /** Centimeters per second², the TEZUKA ZONE's pull (up to ±327 m/s² fits). */
+  steer: 100,
   /** Ten-thousandths of a radian. */
   angle: 10000,
 } as const

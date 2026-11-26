@@ -61,6 +61,9 @@ export const BallState = schema(
     vz: t.int16().default(0),
     /** Sideways acceleration from spin (cm/s²). */
     curve: t.int16().default(0),
+    /** TEZUKA ZONE pull along the ground (cm/s²; 0 unless it is steering). */
+    steerX: t.int16().default(0),
+    steerZ: t.int16().default(0),
     visible: t.boolean().default(false),
     held: t.boolean().default(false),
     /** The shot in flight has bounced on the receiving side. */

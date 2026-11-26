@@ -19,6 +19,9 @@ export interface BallSnap {
   vz: number
   /** Sideways acceleration from spin. */
   curve: number
+  /** TEZUKA ZONE pull along the ground (server-decided; 0 almost always). */
+  steerX: number
+  steerZ: number
   visible: boolean
   held: boolean
   /** The shot has bounced on the receiving side. */

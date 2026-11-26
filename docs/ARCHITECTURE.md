@@ -124,6 +124,9 @@ it was watching and remembers its code (`returnTo`) to rejoin.
   in `shared/wire.ts`: mm, mm/s, cm/s, 1e-4 rad), converted back where the page reads the
   state (`readCourt`, `readPlayers`, the prediction's reconcile, the debug hook). A
   tournament sends every court to everyone, so this cut what the host uploads by a third.
+- The ball also carries `steerX` / `steerZ` (cm/s²): the TEZUKA ZONE's pull, decided by
+  the server only and integrated by the shared `stepBall` (see [tezuka.md](tezuka.md)).
+  It is 0 in every ordinary game, and `stepBall` then runs exactly as before.
 
 ## Tournaments
 

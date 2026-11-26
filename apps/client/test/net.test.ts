@@ -48,6 +48,8 @@ function snap(time: number, x: number): Snapshot {
       vy: 0,
       vz: 0,
       curve: 0,
+      steerX: 0,
+      steerZ: 0,
       visible: true,
       held: false,
       bounced: false,
