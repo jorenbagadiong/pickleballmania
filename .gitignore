@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.yarn/*
+!.yarn/releases
+.pnp.*
+.env
+.env.local
+*.log
+test-results/
+playwright-report/
+.DS_Store
+*.tsbuildinfo
+.playwright-mcp/

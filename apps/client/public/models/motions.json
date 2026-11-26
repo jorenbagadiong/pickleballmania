@@ -1,0 +1,82 @@
+{
+  "idle": {
+    "seconds": 0.4,
+    "loop": true,
+    "velocity": [0.022, 0.028]
+  },
+  "ready": {
+    "seconds": 0.3,
+    "loop": true,
+    "velocity": [-0.063, 0.065]
+  },
+  "walk": {
+    "seconds": 1.1,
+    "loop": true,
+    "velocity": [0.043, 1.365]
+  },
+  "jog": {
+    "seconds": 0.8,
+    "loop": true,
+    "velocity": [0.007, 3.074]
+  },
+  "run": {
+    "seconds": 0.733,
+    "loop": true,
+    "velocity": [0.016, 3.869]
+  },
+  "sprint": {
+    "seconds": 0.7,
+    "loop": true,
+    "velocity": [-0.498, 7.39]
+  },
+  "walkBack": {
+    "seconds": 1.233,
+    "loop": true,
+    "velocity": [0.01, -1.772]
+  },
+  "backpedal": {
+    "seconds": 1.0,
+    "loop": true,
+    "velocity": [0.273, -2.734]
+  },
+  "sideLeft": {
+    "seconds": 0.567,
+    "loop": true,
+    "velocity": [1.512, -0.051]
+  },
+  "sideRight": {
+    "seconds": 0.567,
+    "loop": true,
+    "velocity": [-1.512, -0.051]
+  },
+  "shuffleRight": {
+    "seconds": 0.367,
+    "loop": true,
+    "velocity": [-2.409, 0.081]
+  },
+  "shuffleLeft": {
+    "seconds": 0.367,
+    "loop": true,
+    "velocity": [2.409, 0.081]
+  },
+  "fastShuffleRight": {
+    "seconds": 0.467,
+    "loop": true,
+    "velocity": [-3.016, 0.662]
+  },
+  "fastShuffleLeft": {
+    "seconds": 0.467,
+    "loop": true,
+    "velocity": [3.016, 0.662]
+  },
+  "victory": {
+    "seconds": 2.233,
+    "loop": false,
+    "velocity": [-0.002, 0.007]
+  },
+  "dejected": {
+    "seconds": 2.933,
+    "loop": false,
+    "velocity": [0.39, 0.41]
+  }
+}

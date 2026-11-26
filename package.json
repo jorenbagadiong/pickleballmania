@@ -1,0 +1,40 @@
+{
+  "name": "pickleball-3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "3D multiplayer pickleball (local playable MVP)",
+  "packageManager": "yarn@4.18.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "yarn workspaces foreach -Apiv --include '@pickleball/client' --include '@pickleball/server' run dev",
+    "dev:lan": "GAME_HOST=0.0.0.0 yarn dev",
+    "build": "yarn workspace @pickleball/client build",
+    "host": "yarn build && yarn serve",
+    "serve": "GAME_HOST=${GAME_HOST:-0.0.0.0} yarn workspaces foreach -Apiv --include '@pickleball/client' --include '@pickleball/server' run serve",
+    "typecheck": "yarn workspaces foreach -Av run typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "yarn workspaces foreach -Av run test",
+    "test:e2e": "playwright test",
+    "check": "yarn typecheck && yarn lint && yarn format:check && yarn test && yarn build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.73.0"
+  }
+}
