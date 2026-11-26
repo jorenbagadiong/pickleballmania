@@ -1,4 +1,4 @@
-import { ATHLETES, parseLook } from '@pickleball/shared'
+import { ATHLETES, type Look, SECRET_LOOK, resolveLook } from '@pickleball/shared'
 import { type Bone, Group, type Material, type Object3D, type SkinnedMesh, Vector3 } from 'three'
 import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
@@ -71,13 +71,25 @@ export function loadMotions(): Promise<Motions> {
 
 const templates = new Map<string, Promise<GLTF>>()
 
+/**
+ * The secret developer athlete has no model of its own yet: until it does, it is drawn
+ * as this public one (see docs/tezuka.md).
+ */
+export const SECRET_LOOK_FALLBACK = 'm1' satisfies (typeof ATHLETES)[number]
+
+/** The model file a look is drawn with. */
+export function modelFor(look: string): string {
+  return look === SECRET_LOOK ? SECRET_LOOK_FALLBACK : look
+}
+
 function template(name: string): Promise<GLTF> {
-  let t = templates.get(name)
+  const file = modelFor(name)
+  let t = templates.get(file)
   if (!t) {
-    t = load(`${name}.glb`)
-    templates.set(name, t)
+    t = load(`${file}.glb`)
+    templates.set(file, t)
     // A failed download may be tried again.
-    t.catch(() => templates.delete(name))
+    t.catch(() => templates.delete(file))
   }
   return t
 }
@@ -136,18 +148,20 @@ export async function loadAthlete(name: string): Promise<Athlete> {
 
 /**
  * Who everyone on a court looks like: whoever they chose, and otherwise by name, but
- * not like anyone else on the court while there are enough people to go round.
+ * not like anyone else on the court while there are enough people to go round. `look`
+ * comes from the server, which alone can give the secret one.
  */
 export function castFor(
   players: readonly { id: string; nickname: string; look?: string }[],
-): Map<string, string> {
-  const out = new Map<string, string>()
+): Map<string, Look> {
+  const out = new Map<string, Look>()
   const taken = new Set<string>()
   for (const p of players) {
-    const chosen = parseLook(p.look)
+    const chosen = resolveLook(p.look)
     if (chosen) {
       out.set(p.id, chosen)
-      taken.add(chosen)
+      // Nobody else looks like the model the secret athlete is drawn with, either.
+      taken.add(modelFor(chosen))
     }
   }
   for (const p of players) {

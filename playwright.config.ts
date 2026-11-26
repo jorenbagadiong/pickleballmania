@@ -11,6 +11,11 @@ import { defineConfig } from '@playwright/test'
  */
 const SERVER_PORT = 2667
 const CLIENT_PORT = 4273
+/**
+ * The e2e server's developer key (see docs/tezuka.md): a throwaway value for this
+ * test-only server, never a real one. e2e/tezuka.spec.ts reads the same variable.
+ */
+export const E2E_DEV_KEY = process.env.PW_DEV_KEY ?? 'e2e-only-dev-key-not-a-secret'
 
 export default defineConfig({
   testDir: './e2e',
@@ -41,7 +46,11 @@ export default defineConfig({
     {
       command: 'yarn workspace @pickleball/server serve',
       url: `http://127.0.0.1:${SERVER_PORT}/health`,
-      env: { GAME_HOST: '127.0.0.1', GAME_SERVER_PORT: String(SERVER_PORT) },
+      env: {
+        GAME_HOST: '127.0.0.1',
+        GAME_SERVER_PORT: String(SERVER_PORT),
+        PICKLEBALL_DEV_KEY: E2E_DEV_KEY,
+      },
       reuseExistingServer: false,
       timeout: 30_000,
     },

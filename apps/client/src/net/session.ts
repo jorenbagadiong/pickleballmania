@@ -512,6 +512,7 @@ async function tryRejoin(): Promise<void> {
         joined = await client.joinById(target.code, {
           nickname: target.nickname,
           look: useUi.getState().myLook,
+          ...devJoin(),
         })
       else throw err
     }
@@ -547,6 +548,26 @@ if (typeof window !== 'undefined') {
   })
 }
 
+/**
+ * The developer key, if typed in on this page (see StartScreen). Kept only in this
+ * module's memory: never in storage, the store, a URL or a log. A page refresh forgets it;
+ * a reconnect does not need it (the server remembers the session).
+ */
+let devKey = ''
+
+export function setDevKey(key: string): void {
+  devKey = key
+}
+
+export function hasDevKey(): boolean {
+  return devKey !== ''
+}
+
+/** Join options carrying the developer key, when there is one. */
+function devJoin(): { devKey?: string } {
+  return devKey ? { devKey } : {}
+}
+
 async function connect(action: () => Promise<Room>): Promise<boolean> {
   stopRejoining()
   useUi.setState({ screen: 'connecting', status: 'connecting', error: null })
@@ -560,13 +581,25 @@ async function connect(action: () => Promise<Room>): Promise<boolean> {
   }
 }
 
+/**
+ * @param devPerks the secret developer athlete may play in this room: asked for one room
+ *   at a time (never for a tournament), and only worth asking with a developer key.
+ */
 export async function createRoom(
   nickname: string,
   mode: GameMode,
   tournament = false,
+  devPerks = false,
 ): Promise<boolean> {
   const ok = await connect(() =>
-    client.create(ROOM_NAME, { nickname, mode, tournament, look: useUi.getState().myLook }),
+    client.create(ROOM_NAME, {
+      nickname,
+      mode,
+      tournament,
+      look: useUi.getState().myLook,
+      ...(devPerks && !tournament ? { devPerks: true } : {}),
+      ...devJoin(),
+    }),
   )
   // On a slow connection "New room" may be pressed before the first update says this.
   if (ok && lastUiKey === '') useUi.setState({ mode })
@@ -574,7 +607,9 @@ export async function createRoom(
 }
 
 export function joinRoom(code: string, nickname: string): Promise<boolean> {
-  return connect(() => client.joinById(code, { nickname, look: useUi.getState().myLook }))
+  return connect(() =>
+    client.joinById(code, { nickname, look: useUi.getState().myLook, ...devJoin() }),
+  )
 }
 
 /** After a page refresh, try to take back the seat we had (within the reconnect window). */
@@ -622,7 +657,12 @@ export async function startPractice(nickname = myNickname()): Promise<void> {
   const returnTo = practice ? null : roomCode
   await leaveRoom()
   const ok = await connect(() =>
-    client.create(ROOM_NAME, { nickname, practice: true, look: useUi.getState().myLook }),
+    client.create(ROOM_NAME, {
+      nickname,
+      practice: true,
+      look: useUi.getState().myLook,
+      ...devJoin(),
+    }),
   )
   if (ok) useUi.setState({ returnTo })
 }

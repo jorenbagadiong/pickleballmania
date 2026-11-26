@@ -89,9 +89,21 @@ export const ClientMsg = {
 export const ATHLETES = ['m1', 'm2', 'm3', 'f1', 'f2', 'f3'] as const
 export type AthleteId = (typeof ATHLETES)[number]
 
-/** A chosen athlete, or '' (picked by name) for anything else. */
+/** A chosen athlete, or '' (picked by name) for anything else. Never the secret look. */
 export function parseLook(input: unknown): AthleteId | '' {
   return ATHLETES.find((a) => a === input) ?? ''
+}
+
+/**
+ * The secret developer athlete. Only the server gives it, to an authorized session (see
+ * isTezukaName); nobody can pick it, so it is not one of ATHLETES.
+ */
+export const SECRET_LOOK = 'x1'
+export type Look = AthleteId | typeof SECRET_LOOK
+
+/** A look as the server sent it: a public athlete, the secret one, or '' (picked by name). */
+export function resolveLook(input: unknown): Look | '' {
+  return input === SECRET_LOOK ? SECRET_LOOK : parseLook(input)
 }
 
 /** Server -> client message types. */
@@ -104,6 +116,14 @@ export const ServerMsg = {
 /** The secret name (in any capitals) that, from the host's own computer, turns on held curves. */
 export function isCheaterName(nickname: string): boolean {
   return nickname.trim().toLowerCase() === 'cheater'
+}
+
+/**
+ * The developer's secret name (in any capitals). The name alone grants nothing: the
+ * server also wants the host's own computer, the developer key and a room that allows it.
+ */
+export function isTezukaName(nickname: string): boolean {
+  return nickname.trim().toLowerCase() === 'tezuka'
 }
 
 /** One fixed-step input sample. Movement is a world-space intent; aim is a ground point. */
@@ -204,6 +224,13 @@ export interface JoinOptions {
   tournament?: boolean
   /** Which athlete to play as ('' or missing: picked by name). */
   look?: string
+  /**
+   * Only used when creating a casual room: the secret developer athlete may play here.
+   * (Training always allows it; tournaments never do.)
+   */
+  devPerks?: boolean
+  /** The developer key, checked by the server against PICKLEBALL_DEV_KEY. Never stored. */
+  devKey?: string
 }
 
 /** One-shot visual events broadcast by the server. */

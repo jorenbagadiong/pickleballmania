@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { Group, Object3D, Quaternion, Vector3 } from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ATHLETES, type Athlete, castFor } from '../src/players/athlete/assets'
+import { SECRET_LOOK } from '@pickleball/shared'
+import {
+  ATHLETES,
+  type Athlete,
+  SECRET_LOOK_FALLBACK,
+  castFor,
+  modelFor,
+} from '../src/players/athlete/assets'
 import { Controller, type Input } from '../src/players/athlete/controller'
 import { type Motions, gaitFor } from '../src/players/athlete/locomotion'
 import { BONE, BONES, Figure, Pose } from '../src/players/athlete/skeleton'
@@ -202,6 +209,20 @@ describe('athletes', () => {
     const players = ['Al', 'Bo', 'Cy', 'Di'].map((nickname, i) => ({ id: `${i}`, nickname }))
     expect(new Set(castFor(players).values()).size).toBe(4)
     expect(castFor(players)).toEqual(castFor(players))
+  })
+
+  it('the secret look comes only from the server, drawn with a stand-in model for now', () => {
+    const cast = castFor([
+      { id: 't', nickname: 'Tezuka', look: SECRET_LOOK },
+      ...['Al', 'Bo', 'Cy', 'Di', 'Ed'].map((nickname, i) => ({ id: `${i}`, nickname })),
+    ])
+    expect(cast.get('t')).toBe(SECRET_LOOK)
+    expect(modelFor(SECRET_LOOK)).toBe(SECRET_LOOK_FALLBACK)
+    expect(ATHLETES).toContain(SECRET_LOOK_FALLBACK)
+    // Nobody else is drawn with the stand-in while there are others to go round.
+    for (const id of ['0', '1', '2', '3', '4']) expect(cast.get(id)).not.toBe(SECRET_LOOK_FALLBACK)
+    // Its name alone picks a public athlete, like any other name.
+    expect(ATHLETES).toContain(castFor([{ id: 'n', nickname: 'Tezuka' }]).get('n'))
   })
 
   it('look like whoever they chose, even the same person', () => {

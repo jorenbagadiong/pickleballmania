@@ -3,6 +3,7 @@ import {
   type GameMode,
   NICKNAME_MAX_LENGTH,
   ROOM_CODE_LENGTH,
+  isTezukaName,
   isValidRoomCode,
   normalizeRoomCode,
 } from '@pickleball/shared'
@@ -10,7 +11,7 @@ import { type FormEvent, useState } from 'react'
 import { unlockAudio } from '../audio/sfx'
 import { SERVER_URL } from '../net/config'
 import { roomStatus, useRoomList } from '../net/rooms'
-import { createRoom, joinRoom, startPractice } from '../net/session'
+import { createRoom, joinRoom, setDevKey, startPractice } from '../net/session'
 import { useUi } from '../state/store'
 import { CharacterPicker } from './CharacterPicker'
 
@@ -81,6 +82,8 @@ export function StartScreen() {
   const [nickname, setNickname] = useState(loadNickname)
   const [mode, setMode] = useState<GameMode>('1v1')
   const [tournament, setTournament] = useState(false)
+  /** This casual room lets the secret developer athlete play: off unless ticked, each time. */
+  const [devRoom, setDevRoom] = useState(false)
   const [code, setCode] = useState(() =>
     normalizeRoomCode(new URLSearchParams(window.location.search).get('room') ?? ''),
   )
@@ -92,7 +95,7 @@ export function StartScreen() {
     if (!nickOk || busy) return
     unlockAudio()
     saveNickname(nickname.trim())
-    void createRoom(nickname.trim(), mode, tournament)
+    void createRoom(nickname.trim(), mode, tournament, devRoom && isTezukaName(nickname))
   }
 
   const join = (roomCode: string): void => {
@@ -129,6 +132,41 @@ export function StartScreen() {
           autoFocus
           onChange={(e) => setNickname(e.target.value)}
         />
+
+        {isTezukaName(nickname) && (
+          <>
+            <label className="mb-1 block text-sm font-medium text-slate-300" htmlFor="dev-key">
+              Developer key
+            </label>
+            {/* Uncontrolled: the key lives only in session.ts memory, never in app state. */}
+            <input
+              id="dev-key"
+              data-testid="dev-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              className="mb-5 w-full rounded-lg border border-white/10 bg-slate-800 px-3 py-2.5 outline-none ring-sky-400 focus:ring-2"
+              defaultValue=""
+              onChange={(e) => setDevKey(e.target.value)}
+            />
+            {!invited && (
+              <label className="-mt-3 mb-5 flex cursor-pointer items-center gap-2 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  data-testid="dev-room"
+                  className="h-4 w-4 accent-sky-400"
+                  checked={devRoom && !tournament}
+                  disabled={tournament}
+                  onChange={(e) => setDevRoom(e.target.checked)}
+                />
+                <span>
+                  Allow developer abilities in the room I create
+                  <span className="text-slate-500"> (training always does; tournaments never)</span>
+                </span>
+              </label>
+            )}
+          </>
+        )}
 
         <div className="mb-1 text-sm font-medium text-slate-300">Your character</div>
         <div className="mb-5">

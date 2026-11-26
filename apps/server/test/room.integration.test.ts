@@ -9,6 +9,7 @@ import {
   ClientMsg,
   ROOM_NAME,
   type RoomSummary,
+  SECRET_LOOK,
   ServerMsg,
   type TournamentView,
   WIRE,
@@ -373,6 +374,153 @@ describe('the cheater name', () => {
     await new Promise((r) => setTimeout(r, 300))
     expect(told).toBe(0)
     for (const r of rooms) await r.leave(true)
+  })
+})
+
+describe('the secret developer athlete', () => {
+  const KEY = 'test-dev-key-0123456789'
+  const before = process.env.PICKLEBALL_DEV_KEY
+  beforeAll(() => {
+    process.env.PICKLEBALL_DEV_KEY = KEY
+  })
+  afterAll(() => {
+    if (before === undefined) delete process.env.PICKLEBALL_DEV_KEY
+    else process.env.PICKLEBALL_DEV_KEY = before
+  })
+
+  const lookOf = (room: Room, nickname: string): string | undefined =>
+    players(room).find((p) => p.nickname === nickname)?.look
+  /** Counts held-curve messages from the moment the room is joined. */
+  const counted = async (join: Promise<Room>): Promise<{ room: Room; told: () => number }> => {
+    const room = await join
+    let n = 0
+    room.onMessage(ServerMsg.cheats, () => n++)
+    return { room, told: () => n }
+  }
+  const settle = () => new Promise((r) => setTimeout(r, 250))
+
+  it('with the key, in a room that allows it: the secret look and held curves', async () => {
+    const t = await counted(
+      new Client(URL).create(ROOM_NAME, { nickname: ' tezuka ', devPerks: true, devKey: KEY }),
+    )
+    const bob = await counted(
+      new Client(URL).joinById(t.room.roomId, { nickname: 'Bob', look: 'f1' }),
+    )
+    await waitFor(() => t.told() === 1, 'Tezuka is told about held curves')
+    await waitFor(() => lookOf(bob.room, 'tezuka') === SECRET_LOOK, 'Bob sees the secret look')
+    await settle()
+    expect(bob.told()).toBe(0)
+    expect(lookOf(bob.room, 'Bob')).toBe('f1')
+    // The key went no further than the server's check.
+    expect(JSON.stringify(state(bob.room))).not.toContain(KEY)
+    for (const r of [t.room, bob.room]) await r.leave(true)
+  })
+
+  it('the name alone, a wrong key, or a room not allowing it: a normal player', async () => {
+    const attempts = [
+      { nickname: 'Tezuka', devPerks: true },
+      { nickname: 'Tezuka', devPerks: true, devKey: `${KEY}x` },
+      { nickname: 'Tezuka', devPerks: true, devKey: 42 },
+      { nickname: 'Tezuka', devKey: KEY },
+      { nickname: 'Tezuka', devPerks: true, devKey: KEY, tournament: true },
+      { nickname: 'Tezukas', devPerks: true, devKey: KEY },
+    ]
+    for (const options of attempts) {
+      const t = await counted(new Client(URL).create(ROOM_NAME, options))
+      await waitFor(() => state(t.room).roomCode === t.room.roomId, 'joined')
+      await settle()
+      expect(t.told(), JSON.stringify({ ...options, devKey: '…' })).toBe(0)
+      expect(lookOf(t.room, options.nickname) ?? '').not.toBe(SECRET_LOOK)
+      await t.room.leave(true)
+    }
+  }, 20000)
+
+  it('is off altogether without PICKLEBALL_DEV_KEY', async () => {
+    delete process.env.PICKLEBALL_DEV_KEY
+    try {
+      const t = await counted(
+        new Client(URL).create(ROOM_NAME, { nickname: 'Tezuka', devPerks: true, devKey: KEY }),
+      )
+      await settle()
+      expect(t.told()).toBe(0)
+      expect(lookOf(t.room, 'Tezuka')).toBe('')
+      await t.room.leave(true)
+    } finally {
+      process.env.PICKLEBALL_DEV_KEY = KEY
+    }
+  })
+
+  it('training allows it without asking', async () => {
+    const t = await counted(
+      new Client(URL).create(ROOM_NAME, { nickname: 'Tezuka', practice: true, devKey: KEY }),
+    )
+    await waitFor(() => lookOf(t.room, 'Tezuka') === SECRET_LOOK, 'secret look in training')
+    await waitFor(() => t.told() === 1, 'held curves in training')
+    expect(lookOf(t.room, 'Coach Erwin')).toBe('m2')
+    await t.room.leave(true)
+  }, 20000)
+
+  it('nobody can pick the secret look, and the secret athlete cannot change theirs', async () => {
+    const t = await counted(
+      new Client(URL).create(ROOM_NAME, { nickname: 'Tezuka', devPerks: true, devKey: KEY }),
+    )
+    const eve = await new Client(URL).joinById(t.room.roomId, {
+      nickname: 'Eve',
+      look: SECRET_LOOK,
+    })
+    await waitFor(() => lookOf(eve, 'Tezuka') === SECRET_LOOK, 'Eve sees Tezuka')
+    expect(lookOf(eve, 'Eve')).toBe('')
+    eve.send(ClientMsg.look, { look: SECRET_LOOK })
+    eve.send(ClientMsg.look, { look: 'X1' })
+    t.room.send(ClientMsg.look, { look: 'm2' })
+    t.room.send(ClientMsg.look, { look: '' })
+    await settle()
+    expect(lookOf(eve, 'Eve')).toBe('')
+    expect(lookOf(eve, 'Tezuka')).toBe(SECRET_LOOK)
+    for (const r of [t.room, eve]) await r.leave(true)
+  })
+
+  it('keeps it through a reconnect, and never passes it to someone reusing the name', async () => {
+    const tClient = new Client(URL)
+    const t = await counted(
+      tClient.create(ROOM_NAME, { nickname: 'Tezuka', devPerks: true, devKey: KEY }),
+    )
+    const bob = await new Client(URL).joinById(t.room.roomId, { nickname: 'Bob' })
+    await waitFor(() => t.told() === 1, 'told once')
+
+    const token = t.room.reconnectionToken
+    t.room.reconnection.enabled = false
+    t.room.connection.close()
+    await waitFor(
+      () => players(bob).find((p) => p.nickname === 'Tezuka')?.connected === false,
+      'drop',
+    )
+    const back = await counted(tClient.reconnect(token))
+    await waitFor(() => back.told() === 1, 'held curves again after the reconnect')
+    expect(lookOf(bob, 'Tezuka')).toBe(SECRET_LOOK)
+
+    // Gone for good: the next person called Tezuka (no key) gets nothing.
+    await back.room.leave(true)
+    await waitFor(() => !players(bob).some((p) => p.nickname === 'Tezuka'), 'Tezuka left')
+    const copy = await counted(
+      new Client(URL).joinById(bob.roomId, { nickname: 'Tezuka', look: SECRET_LOOK }),
+    )
+    await waitFor(() => lookOf(bob, 'Tezuka') !== undefined, 'the copy joined')
+    await settle()
+    expect(copy.told()).toBe(0)
+    expect(lookOf(bob, 'Tezuka')).toBe('')
+    for (const r of [copy.room, bob]) await r.leave(true)
+  }, 20000)
+
+  it('leaves the cheater exactly as before', async () => {
+    const c = await counted(
+      new Client(URL).create(ROOM_NAME, { nickname: 'Cheater', devPerks: true, devKey: KEY }),
+    )
+    await waitFor(() => c.told() === 1, 'the cheater is told')
+    await settle()
+    expect(c.told()).toBe(1)
+    expect(lookOf(c.room, 'Cheater')).toBe('')
+    await c.room.leave(true)
   })
 })
 

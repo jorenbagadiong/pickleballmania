@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ATHLETES,
+  SECRET_LOOK,
+  isCheaterName,
+  isTezukaName,
+  parseLook,
+  resolveLook,
   CHAT_MAX_LENGTH,
   COURT,
   FIXED_DT,
@@ -123,6 +129,18 @@ describe('protocol helpers', () => {
     expect(sanitizeNickname('')).toBe('Player')
     expect(sanitizeNickname(42)).toBe('Player')
     expect(sanitizeNickname('x'.repeat(50))).toHaveLength(16)
+  })
+
+  it('knows the secret names, and keeps the secret look out of reach', () => {
+    for (const name of ['Tezuka', ' tezuka ', 'TEZUKA']) expect(isTezukaName(name)).toBe(true)
+    for (const name of ['Tezukas', 'Tez uka', 'Cheater', '']) expect(isTezukaName(name)).toBe(false)
+    expect(isCheaterName('Tezuka')).toBe(false)
+    expect(ATHLETES).not.toContain(SECRET_LOOK)
+    expect(parseLook(SECRET_LOOK)).toBe('')
+    expect(parseLook('X1')).toBe('')
+    expect(resolveLook(SECRET_LOOK)).toBe(SECRET_LOOK)
+    expect(resolveLook('f2')).toBe('f2')
+    expect(resolveLook('nonsense')).toBe('')
   })
 
   it('normalizes and validates room codes', () => {

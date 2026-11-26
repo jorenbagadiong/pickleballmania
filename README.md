@@ -133,6 +133,10 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   everyone what happened, who did it, and whether it was a point, a second serve
   or a side out.
 - Not included: switching ends mid-game, spin, time-outs, line-call challenges.
+- **Developer extras:** on the computer running the server, the nickname `cheater`
+  turns on held curves (Q, E, right mouse button). A secret developer athlete also
+  needs `PICKLEBALL_DEV_KEY` and never plays in tournaments; see
+  [docs/tezuka.md](docs/tezuka.md).
 
 ## Tech
 

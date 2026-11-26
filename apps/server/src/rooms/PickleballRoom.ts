@@ -19,11 +19,13 @@ import {
   sanitizeNickname,
   isCheaterName,
   parseLook,
+  SECRET_LOOK,
   toWire,
 } from '@pickleball/shared'
 import { GameSimulation } from '../simulation/GameSimulation'
 import { COACH_ID, COACH_LOOK, PracticeSimulation } from '../simulation/PracticeSimulation'
 import { TournamentRunner } from '../tournament/TournamentRunner'
+import { type JoinAuth, devKeyMatches, grantsTezuka } from './devAuth'
 import { isHostMachine } from './hostMachine'
 import { releaseRoomCode, reserveRoomCode } from './roomCodes'
 import { listRoom, unlistRoom } from './roomDirectory'
@@ -42,10 +44,6 @@ export interface RoomCreateOptions {
  * commands into the simulation, runs it on a fixed timestep and mirrors its
  * state into the synchronized schema.
  */
-interface JoinAuth {
-  /** Joined from the computer running the server. */
-  onHost: boolean
-}
 
 export class PickleballRoom extends Room<{ state: GameState }> {
   override maxClients = 2
@@ -66,6 +64,10 @@ export class PickleballRoom extends Room<{ state: GameState }> {
   private readonly looks = new Map<string, string>()
   /** Players with held curves on (see onJoin). */
   private readonly cheaters = new Set<string>()
+  /** Sessions playing the secret developer athlete (see devAuth). */
+  private readonly tezukas = new Set<string>()
+  /** The secret athlete may play here: training, or a casual room created to allow it. */
+  private devPerks = false
 
   override onCreate(options: RoomCreateOptions & Record<string, unknown>): void {
     this.allowedOrigins = Array.isArray(options.allowedOrigins) ? options.allowedOrigins : []
@@ -82,6 +84,8 @@ export class PickleballRoom extends Room<{ state: GameState }> {
       )
       this.runner = new TournamentRunner(mode, this.courts, (id) => !this.dropped.has(id))
     } else this.courts = [this.sim]
+    // Never in a tournament: nobody there agreed to play against it.
+    this.devPerks = training !== null || (options.devPerks === true && !this.runner)
     this.code = reserveRoomCode()
     this.roomId = this.code
     this.state.roomCode = this.code
@@ -92,8 +96,10 @@ export class PickleballRoom extends Room<{ state: GameState }> {
       this.onMessage(ClientMsg.practice, (_client, msg: unknown) => training.setDrill(msg))
     } else this.list(mode)
 
-    // Anyone may change who they play as, at any time; everyone sees it.
+    // Anyone may change who they play as, at any time; everyone sees it. The secret
+    // athlete keeps their look, and nobody can choose it.
     this.onMessage(ClientMsg.look, (client, msg: unknown) => {
+      if (this.tezukas.has(client.sessionId)) return
       this.looks.set(client.sessionId, parseLook((msg as { look?: unknown } | null)?.look))
       this.syncState()
     })
@@ -159,9 +165,14 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     }))
   }
 
-  /** Becomes `client.auth`: whether they play on the computer running the server. */
-  override onAuth(_client: Client, _options: unknown, context: AuthContext): JoinAuth {
-    const auth = { onHost: isHostMachine(context.ip) }
+  /**
+   * Becomes `client.auth` (kept on the server): whether they play on the computer running
+   * the server, and sent the developer key. The key itself goes no further than here.
+   */
+  override onAuth(_client: Client, options: unknown, context: AuthContext): JoinAuth {
+    const opts = options && typeof options === 'object' ? (options as Record<string, unknown>) : {}
+    const auth: JoinAuth = { onHost: isHostMachine(context.ip), devKey: devKeyMatches(opts.devKey) }
+    delete opts.devKey
     if (this.allowedOrigins.length === 0) return auth
     const origin = context.headers.get('origin')?.replace(/\/$/, '')
     if (origin && this.allowedOrigins.includes(origin)) return auth
@@ -171,9 +182,17 @@ export class PickleballRoom extends Room<{ state: GameState }> {
   override onJoin(client: Client, options: { nickname?: unknown; look?: unknown } = {}): void {
     const nickname = sanitizeNickname(options.nickname)
     this.looks.set(client.sessionId, parseLook(options.look))
+    const auth = client.auth as JoinAuth | undefined
     // Held curves: only for "cheater" on the host's own computer, told to them alone.
-    if (isCheaterName(nickname) && (client.auth as JoinAuth | undefined)?.onHost === true) {
+    if (isCheaterName(nickname) && auth?.onHost === true) {
       this.cheaters.add(client.sessionId)
+      client.send(ServerMsg.cheats, { on: true })
+    }
+    // The developer's secret athlete: held curves too, and a look nobody else can have.
+    if (grantsTezuka(nickname, auth, this.devPerks)) {
+      this.tezukas.add(client.sessionId)
+      this.cheaters.add(client.sessionId)
+      this.looks.set(client.sessionId, SECRET_LOOK)
       client.send(ServerMsg.cheats, { on: true })
     }
     if (this.runner) {
@@ -252,6 +271,7 @@ export class PickleballRoom extends Room<{ state: GameState }> {
   override onLeave(client: Client): void {
     this.dropped.delete(client.sessionId)
     this.cheaters.delete(client.sessionId)
+    this.tezukas.delete(client.sessionId)
     if (this.runner) this.runner.leave(client.sessionId)
     else this.sim.removePlayer(client.sessionId)
     this.state.spectators.delete(client.sessionId)

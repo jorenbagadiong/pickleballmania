@@ -103,6 +103,8 @@ it was watching and remembers its code (`returnTo`) to rejoin.
   actually covered; `strokes.ts` describes 15 shots; `controller.ts` layers them and solves
   the arm (`ik.ts`) so that the paddle is on the ball at the contact the server reported
   (`contact.ts`; predicted until it is known). Feet are kept on the ground.
+- `PlayerState.look` is set by the server only. Players pick from `ATHLETES` (`parseLook`);
+  the secret look `x1` is granted by the server, never chosen (see [tezuka.md](tezuka.md)).
 - `stepPlayer` (shared) accelerates and brakes; speeds are part of the player state, so the
   client's prediction replays them exactly.
 
