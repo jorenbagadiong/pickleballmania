@@ -107,6 +107,8 @@ export interface PlayerSummary {
  * straight from the snapshot buffer to avoid React re-renders at 30–60 Hz.
  */
 export interface UiState {
+  /** Held curves (Q, E, the right button): the server turns them on for one player only. */
+  cheats: boolean
   screen: 'start' | 'connecting' | 'game'
   status: ConnectionStatus
   error: string | null
@@ -181,6 +183,7 @@ export interface UiState {
 }
 
 export const initialUiState: UiState = {
+  cheats: false,
   screen: 'start',
   status: 'idle',
   error: null,

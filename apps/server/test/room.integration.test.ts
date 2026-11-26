@@ -9,6 +9,7 @@ import {
   ClientMsg,
   ROOM_NAME,
   type RoomSummary,
+  ServerMsg,
   type TournamentView,
   WIRE,
 } from '@pickleball/shared'
@@ -342,6 +343,37 @@ describe('choosing a character', () => {
     await waitFor(() => lookOf(ra, 'Bob') === '', 'back to picked by name')
     for (const r of [rb, ra]) await r.leave(true)
   }, 20000)
+})
+
+describe('the cheater name', () => {
+  it('turns held curves on for "cheater" on the host computer, telling only them', async () => {
+    const got = { cheater: 0, bob: 0, lower: 0 }
+    const cheater = await new Client(URL).create(ROOM_NAME, { nickname: 'Cheater' })
+    cheater.onMessage(ServerMsg.cheats, () => got.cheater++)
+    const bob = await new Client(URL).joinById(cheater.roomId, { nickname: 'Bob' })
+    bob.onMessage(ServerMsg.cheats, () => got.bob++)
+    await waitFor(() => got.cheater === 1, 'the cheater is told')
+    const lower = await new Client(URL).create(ROOM_NAME, { nickname: ' cheater ' })
+    lower.onMessage(ServerMsg.cheats, () => got.lower++)
+    await waitFor(() => got.lower === 1, 'any capitals work')
+    await new Promise((r) => setTimeout(r, 200))
+    expect(got.bob).toBe(0)
+    expect(got.cheater).toBe(1)
+    for (const r of [cheater, bob, lower]) await r.leave(true)
+  })
+
+  it('other names get nothing, even close ones', async () => {
+    let told = 0
+    const rooms: Room[] = []
+    for (const nickname of ['Cheaters', 'Bob', 'cheat er']) {
+      const r = await new Client(URL).create(ROOM_NAME, { nickname })
+      r.onMessage(ServerMsg.cheats, () => told++)
+      rooms.push(r)
+    }
+    await new Promise((r) => setTimeout(r, 300))
+    expect(told).toBe(0)
+    for (const r of rooms) await r.leave(true)
+  })
 })
 
 describe('training', () => {

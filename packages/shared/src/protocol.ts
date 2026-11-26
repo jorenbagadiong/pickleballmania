@@ -97,7 +97,14 @@ export function parseLook(input: unknown): AthleteId | '' {
 /** Server -> client message types. */
 export const ServerMsg = {
   fx: 'fx',
+  /** Sent to one player only: their held curves (Q, E, the right button) are on. */
+  cheats: 'cheats',
 } as const
+
+/** The secret name (in any capitals) that, from the host's own computer, turns on held curves. */
+export function isCheaterName(nickname: string): boolean {
+  return nickname.trim().toLowerCase() === 'cheater'
+}
 
 /** One fixed-step input sample. Movement is a world-space intent; aim is a ground point. */
 export interface InputFrame {

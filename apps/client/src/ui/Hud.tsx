@@ -476,6 +476,7 @@ function Rules() {
 
 export function ControlsHelp() {
   const [open, setOpen] = useState(true)
+  const cheats = useUi((s) => s.cheats)
   return (
     <div className="pointer-events-auto max-w-[17rem] rounded-xl bg-slate-900/75 px-3 py-2 text-xs text-slate-200">
       <button
@@ -504,6 +505,12 @@ export function ControlsHelp() {
           <li>
             <b>Swipe the mouse</b> left / right while swinging or serving — curve it
           </li>
+          {cheats && (
+            <li data-testid="cheat-help" className="text-cyan-300">
+              <b>Q</b> / <b>E</b> or <b>right mouse button</b> held, slide the mouse — curve it
+              (cheater only)
+            </li>
+          )}
           <li>
             <b>Space</b> — serve (when it is your serve)
           </li>

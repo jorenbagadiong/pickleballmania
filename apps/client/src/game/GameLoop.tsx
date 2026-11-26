@@ -20,6 +20,7 @@ import {
   movementIntent,
   plannedSpin,
   spaceAction,
+  updateBend,
 } from '../input/controls'
 import { wantsJump } from '../input/jump'
 import { swipe } from '../input/swipe'
@@ -80,6 +81,18 @@ export function GameLoop() {
   /** Rally shot the last swing was aimed at (-1 outside a rally). */
   const lastShot = useRef(-1)
   const shotSwings = useRef(0)
+
+  // Held curves are on only while the server says so for this player.
+  useEffect(() => {
+    const check = (): void => {
+      const cheats = useUi.getState().cheats
+      if (cheats === controls.cheats) return
+      controls.cheats = cheats
+      updateBend()
+    }
+    check()
+    return useUi.subscribe(check)
+  }, [])
 
   // Shot numbers start over every rally.
   useEffect(
@@ -164,8 +177,9 @@ export function GameLoop() {
     frame.world = frame.courts[focusCourt()] ?? null
     frame.camera = state.camera
 
-    // Aim: where the mouse ray meets the ground.
-    aimAt(state.pointer, state.camera, controls.aim)
+    // Aim: where the mouse ray meets the ground. While a curve is held it stays put, as
+    // the mouse is busy choosing the bend.
+    if (!controls.bend) aimAt(state.pointer, state.camera, controls.aim)
 
     const ui = useUi.getState()
     const slot = ui.mySlot

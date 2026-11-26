@@ -426,9 +426,17 @@ test('Space serves on your serve and swings (Shift smashes) otherwise', async ({
   await bob.context.close()
 })
 
-test('swiping the mouse while serving curves the ball to the right', async ({ browser }) => {
+/**
+ * Alice serves at the box on her left, served the way `serve` does it, while Bob's
+ * browser watches how the ball's sideways speed changes before it bounces.
+ */
+async function serveAndWatch(
+  browser: Browser,
+  serve: (page: Page, aim: { x: number; y: number }) => Promise<void>,
+  name = 'Alice',
+): Promise<{ vx: number[]; x: number }> {
   const alice = await openPlayer(browser, '/?e2e=1')
-  await alice.page.getByTestId('nickname').fill('Alice')
+  await alice.page.getByTestId('nickname').fill(name)
   await alice.page.getByTestId('create-room').click()
   const codeEl = alice.page.getByTestId('room-code')
   await expect(codeEl).toHaveText(/^[A-Z2-9]{5}$/)
@@ -440,8 +448,11 @@ test('swiping the mouse while serving curves the ball to the right', async ({ br
   await alice.page.getByTestId('ready').click()
   await bob.page.getByTestId('ready').click()
   await expect(alice.page.getByTestId('serve-prompt')).toBeVisible()
+  // Only the cheater (here: on the computer running the server) is shown the hold help.
+  await expect(alice.page.getByTestId('cheat-help')).toHaveCount(
+    name.toLowerCase() === 'cheater' ? 1 : 0,
+  )
 
-  // Bob's browser watches how the ball's sideways speed changes before it bounces.
   const seen = bob.page.evaluate(
     () =>
       new Promise<{ vx: number[]; x: number }>((resolve) => {
@@ -464,21 +475,73 @@ test('swiping the mouse while serving curves the ball to the right', async ({ br
   const aim = await alice.page.evaluate(() => window.__PB__.project(-1.8, -5.5))
   await alice.page.mouse.move(aim!.x, aim!.y)
   await alice.page.waitForTimeout(200)
-  // A real-time swipe with the real mouse: to the right, serving partway through it.
-  const width = alice.page.viewportSize()!.width
-  const started = Date.now()
-  for (let t = 0; t < 0.15; t = (Date.now() - started) / 1000) {
-    await alice.page.mouse.move(aim!.x + width * 2.5 * t, aim!.y)
-  }
-  await alice.page.keyboard.press('Space')
-  const { vx, x } = await seen
-  expect(vx.length).toBeGreaterThan(3)
-  expect(vx.at(-1)! - vx[0]!).toBeGreaterThan(2) // pushed toward +x, her right
-  expect(x).toBeLessThan(-0.5) // and still heading for the box she aimed at, on her left
+  await serve(alice.page, aim!)
+  const result = await seen
   expect(alice.errors, alice.errors.join('\n')).toEqual([])
   expect(bob.errors, bob.errors.join('\n')).toEqual([])
   await alice.context.close()
   await bob.context.close()
+  return result
+}
+
+test('swiping the mouse while serving curves the ball to the right', async ({ browser }) => {
+  const { vx, x } = await serveAndWatch(browser, async (page, aim) => {
+    // A real-time swipe with the real mouse: to the right, serving partway through it.
+    const width = page.viewportSize()!.width
+    const started = Date.now()
+    for (let t = 0; t < 0.15; t = (Date.now() - started) / 1000) {
+      await page.mouse.move(aim.x + width * 2.5 * t, aim.y)
+    }
+    await page.keyboard.press('Space')
+  })
+  expect(vx.length).toBeGreaterThan(3)
+  expect(vx.at(-1)! - vx[0]!).toBeGreaterThan(2) // pushed toward +x, her right
+  expect(x).toBeLessThan(-0.5) // and still heading for the box she aimed at, on her left
+})
+
+const holdE = async (page: Page): Promise<void> => {
+  await page.keyboard.down('KeyE')
+  await page.keyboard.press('Space')
+  await page.keyboard.up('KeyE')
+}
+
+test('the cheater holding E while serving curves the ball to the right', async ({ browser }) => {
+  const { vx, x } = await serveAndWatch(browser, holdE, 'Cheater')
+  expect(vx.length).toBeGreaterThan(3)
+  expect(vx.at(-1)! - vx[0]!).toBeGreaterThan(2) // pushed toward +x, her right
+  expect(x).toBeLessThan(-0.5) // and still heading for the box she aimed at
+})
+
+test('the cheater holding the right button and sliding right curves the serve right', async ({
+  browser,
+}) => {
+  const { vx, x } = await serveAndWatch(
+    browser,
+    async (page, aim) => {
+      const width = page.viewportSize()!.width
+      await page.mouse.down({ button: 'right' })
+      // Slowly, so it is the slide that counts, not a swipe.
+      for (let i = 1; i <= 10; i++) {
+        await page.mouse.move(aim.x + width * 0.012 * i, aim.y)
+        await page.waitForTimeout(40)
+      }
+      await page.waitForTimeout(200)
+      await page.keyboard.press('Space')
+      await page.mouse.up({ button: 'right' })
+    },
+    'cheater',
+  )
+  expect(vx.length).toBeGreaterThan(3)
+  expect(vx.at(-1)! - vx[0]!).toBeGreaterThan(2) // pushed toward +x, her right
+  expect(x).toBeLessThan(-0.5) // and still heading for where she aimed before sliding
+})
+
+test('anyone else holding E serves straight: only the swipe curves for them', async ({
+  browser,
+}) => {
+  const { vx } = await serveAndWatch(browser, holdE, 'Alice')
+  expect(vx.length).toBeGreaterThan(0)
+  expect(Math.abs(vx.at(-1)! - vx[0]!)).toBeLessThan(0.3)
 })
 
 test('the lobby panel can be minimized, and you can still get ready', async ({ browser }) => {

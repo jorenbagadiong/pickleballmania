@@ -392,6 +392,7 @@ function attach(r: Room): void {
     error: null,
     roomCode: r.roomId,
     sessionId: r.sessionId,
+    cheats: false,
   })
 
   r.onStateChange((s: unknown) => onState(r, s as StateView))
@@ -401,6 +402,7 @@ function attach(r: Room): void {
     pendingFx.push({ ...e, at })
     for (const cb of fxListeners) cb(e)
   })
+  r.onMessage(ServerMsg.cheats, (m: { on?: unknown }) => useUi.setState({ cheats: m.on === true }))
   r.onDrop(() => useUi.setState({ status: 'reconnecting' }))
   r.onReconnect(() => {
     saveSession(r)

@@ -17,12 +17,14 @@ import {
   teamSizeFor,
   sanitizeChat,
   sanitizeNickname,
+  isCheaterName,
   parseLook,
   toWire,
 } from '@pickleball/shared'
 import { GameSimulation } from '../simulation/GameSimulation'
 import { COACH_ID, COACH_LOOK, PracticeSimulation } from '../simulation/PracticeSimulation'
 import { TournamentRunner } from '../tournament/TournamentRunner'
+import { isHostMachine } from './hostMachine'
 import { releaseRoomCode, reserveRoomCode } from './roomCodes'
 import { listRoom, unlistRoom } from './roomDirectory'
 import { ChatState, CourtState, GameState, PlayerState, SpectatorState } from './schema'
@@ -40,6 +42,11 @@ export interface RoomCreateOptions {
  * commands into the simulation, runs it on a fixed timestep and mirrors its
  * state into the synchronized schema.
  */
+interface JoinAuth {
+  /** Joined from the computer running the server. */
+  onHost: boolean
+}
+
 export class PickleballRoom extends Room<{ state: GameState }> {
   override maxClients = 2
   override patchRate = PATCH_INTERVAL_MS
@@ -57,6 +64,8 @@ export class PickleballRoom extends Room<{ state: GameState }> {
   private readonly chatTimes = new Map<string, number[]>()
   /** The athlete each person chose, by session ('' = picked by name). */
   private readonly looks = new Map<string, string>()
+  /** Players with held curves on (see onJoin). */
+  private readonly cheaters = new Set<string>()
 
   override onCreate(options: RoomCreateOptions & Record<string, unknown>): void {
     this.allowedOrigins = Array.isArray(options.allowedOrigins) ? options.allowedOrigins : []
@@ -150,16 +159,23 @@ export class PickleballRoom extends Room<{ state: GameState }> {
     }))
   }
 
-  override onAuth(_client: Client, _options: unknown, context: AuthContext): boolean {
-    if (this.allowedOrigins.length === 0) return true
+  /** Becomes `client.auth`: whether they play on the computer running the server. */
+  override onAuth(_client: Client, _options: unknown, context: AuthContext): JoinAuth {
+    const auth = { onHost: isHostMachine(context.ip) }
+    if (this.allowedOrigins.length === 0) return auth
     const origin = context.headers.get('origin')?.replace(/\/$/, '')
-    if (origin && this.allowedOrigins.includes(origin)) return true
+    if (origin && this.allowedOrigins.includes(origin)) return auth
     throw new ServerError(403, 'This page is not allowed to join games on this server')
   }
 
   override onJoin(client: Client, options: { nickname?: unknown; look?: unknown } = {}): void {
     const nickname = sanitizeNickname(options.nickname)
     this.looks.set(client.sessionId, parseLook(options.look))
+    // Held curves: only for "cheater" on the host's own computer, told to them alone.
+    if (isCheaterName(nickname) && (client.auth as JoinAuth | undefined)?.onHost === true) {
+      this.cheaters.add(client.sessionId)
+      client.send(ServerMsg.cheats, { on: true })
+    }
     if (this.runner) {
       this.runner.join(client.sessionId, nickname)
       this.syncState()
@@ -228,12 +244,14 @@ export class PickleballRoom extends Room<{ state: GameState }> {
 
   override onReconnect(client: Client): void {
     this.dropped.delete(client.sessionId)
+    if (this.cheaters.has(client.sessionId)) client.send(ServerMsg.cheats, { on: true })
     this.courtOf(client.sessionId).setConnected(client.sessionId, true)
     this.syncState()
   }
 
   override onLeave(client: Client): void {
     this.dropped.delete(client.sessionId)
+    this.cheaters.delete(client.sessionId)
     if (this.runner) this.runner.leave(client.sessionId)
     else this.sim.removePlayer(client.sessionId)
     this.state.spectators.delete(client.sessionId)
