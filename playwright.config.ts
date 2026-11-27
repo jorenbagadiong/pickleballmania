@@ -57,7 +57,12 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: 'yarn workspace @pickleball/client build && yarn workspace @pickleball/client serve',
+      // Its own build folder: `dist` is what `yarn host` serves to real players, built for
+      // the real game server. Sharing it let a host restart swap the tests' pages onto the
+      // real server mid-run (no grant there with the test key), and let a test run swap
+      // the host's pages onto the test server.
+      command:
+        'yarn workspace @pickleball/client build --outDir dist-e2e && yarn workspace @pickleball/client serve --outDir dist-e2e',
       url: `http://127.0.0.1:${CLIENT_PORT}`,
       env: {
         GAME_HOST: '127.0.0.1',

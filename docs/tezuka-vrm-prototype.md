@@ -286,7 +286,7 @@ confirmed later than that is shown with the swing already past.
 decide whether to let the swing wait for the server, or replay a short swing when a late
 confirmation arrives. Gameplay is unaffected: the server decides every hit.
 
-### The first full browser run of C1: secret-athlete grants stopped (not reproduced)
+### The first full browser run of C1: secret-athlete grants stopped (cause found in D1)
 
 **What happened:**
 
@@ -313,8 +313,29 @@ standard output isn't kept.
 only on a VRM test assertion, later replaced; then 32 of 32 passed. The run-1 log is kept
 in the C1 evidence folder.
 
-**If it returns:** keep `test-results/` before re-running, and capture the test server's
-output (`stdout: 'pipe'` on the game server in `playwright.config.ts`).
+**Cause, found in Phase D1:** the browser tests built and served `apps/client/dist`, the
+same folder `yarn host` builds and serves to real players.
+
+- **When it happened:** in D1 the same symptom came back in 2 of 4 repeats of one test,
+  and the developer's `yarn host` had restarted (17:12:24) during that run.
+- **What the host's build did to the tests:**
+  - its `yarn build` replaced the tests' bundle mid-run, so one page load failed with
+    an HTTP error while the folder was half written;
+  - the pages after that loaded the host's bundle, built for the real game server
+    (port 2567, not the tests' 2667). That server doesn't accept the test key: training
+    rooms worked, but no grant, so look `''`.
+- **What the tests' build did to the host:** each test run left the host serving a bundle
+  that pointed at the stopped test server.
+- **The probe:** a 12-run probe recording only whether the join request carried a key
+  (never the key) granted every time while nothing else was building.
+- **Fixed:** the browser tests now build into `apps/client/dist-e2e` (`playwright.config.ts`,
+  gitignored). The authorization code is unchanged.
+- **Checked after the fix:**
+  - the developer's host restarted at 18:23:51 while a test run built `dist-e2e`
+    (18:23:56). Each folder kept its own server: `dist` the default 2567, `dist-e2e` 2667;
+  - in a controlled run, `yarn build` (what `yarn host` runs on start) rebuilt `dist`
+    three times during `tezuka.spec.ts` and `zoneFx.spec.ts`. `dist-e2e` was untouched,
+    and all 9 grant-dependent tests passed.
 
 ## Stabilization record (before the prototype commit)
 
