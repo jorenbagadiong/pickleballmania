@@ -14,3 +14,6 @@ playwright-report/
 # The secret athlete's private model (docs/tezuka-character.md). Kept out of Git only:
 # files under public/ are still served to every player who opens the game.
 apps/client/public/models/private/
+# Private character source art (textures for VRoid): kept out of Git, and outside
+# public/ so players cannot download it.
+private-assets/

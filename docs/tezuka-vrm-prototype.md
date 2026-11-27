@@ -7,6 +7,10 @@ secret character.
 
 ## The sample
 
+> The sample has since been deleted from `public/`: the real model, `x1.vrm`
+> ([tools/characters/x1](../tools/characters/x1/README.md)), replaced it, and the VRM tests
+> now use `x1.vrm` when it exists.
+
 - **File:** `VRM1_Constraint_Twist_Sample.vrm` (10.8 MB, SHA-256 `12c2b97e…f2631a2`), from
   the VRM Consortium's official samples:
   `github.com/vrm-c/vrm-specification/samples/VRM1_Constraint_Twist_Sample`.

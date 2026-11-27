@@ -29,7 +29,7 @@ import { useUi } from '../state/store'
  * connects to the game server, so it can't give anyone anything in a game.
  */
 
-const DEFAULT_VRM = '/models/private/prototype/VRM1_Constraint_Twist_Sample.vrm'
+const DEFAULT_VRM = '/models/private/x1.vrm'
 
 type Anim =
   | 'idle'
@@ -665,7 +665,7 @@ export function Viewer() {
             m1 (GLB)
           </button>
           <button className={button(file === DEFAULT_VRM)} onClick={() => setFile(DEFAULT_VRM)}>
-            VRM sample
+            x1.vrm
           </button>
           {(['left', 'right'] as const).map((h) => (
             <button key={h} className={button(hand === h)} onClick={() => setHand(h)}>

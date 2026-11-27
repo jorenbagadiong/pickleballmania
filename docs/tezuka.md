@@ -5,14 +5,15 @@ deliberately overpowered and never available in tournaments.
 
 ## What it gets
 
-| Status  | What                                                                                                 |
-| ------- | ---------------------------------------------------------------------------------------------------- |
-| Done    | The secret look `x1` (`SECRET_LOOK`), given by the server and chosen by nobody                       |
-| Done    | Held curves (Q, E, right mouse button), exactly as the `cheater` name gets them                      |
-| Done    | The TEZUKA ZONE passive: incoming opponent shots bend toward this player (below)                     |
-| Done    | Left-handed play on the existing motions, strokes and IK (Phase C2, below)                           |
-| Proto   | A VRM body of its own: works with a sample model; [tezuka-vrm-prototype.md](tezuka-vrm-prototype.md) |
-| Not yet | The final model and zone effects (Phases C1, C3 and D)                                               |
+| Status  | What                                                                                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Done    | The secret look `x1` (`SECRET_LOOK`), given by the server and chosen by nobody                                             |
+| Done    | Held curves (Q, E, right mouse button), exactly as the `cheater` name gets them                                            |
+| Done    | The TEZUKA ZONE passive: incoming opponent shots bend toward this player (below)                                           |
+| Done    | Left-handed play on the existing motions, strokes and IK (Phase C2, below)                                                 |
+| Done    | A VRM body of its own ([tezuka-vrm-prototype.md](tezuka-vrm-prototype.md))                                                 |
+| Done    | The model, `x1.vrm`, built automatically from a CC0 VRoid sample ([tools/characters/x1](../tools/characters/x1/README.md)) |
+| Not yet | Zone effects (Phase D)                                                                                                     |
 
 **Model fallback:** `x1` has no model yet, so it is drawn with the public athlete `m1`
 (`SECRET_LOOK_FALLBACK` in `apps/client/src/players/athlete/assets.ts`). While it is on

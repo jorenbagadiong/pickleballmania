@@ -1,7 +1,9 @@
-import type { VRM, VRMHumanBoneName } from '@pixiv/three-vrm'
+import type { VRM, VRMHumanBoneName, VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
 import { Group, type Material, type Mesh, Object3D, Quaternion, Vector3 } from 'three'
+import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { Athlete } from './assets'
 import { BONES, PARENT } from './skeleton'
+import { timed } from './timing'
 
 /*
  * A VRM body (VRoid Studio's export) driven by the athletes' own controller, unchanged.
@@ -336,31 +338,53 @@ export function disposeTree(root: Object3D): void {
  */
 export async function loadVrmAthlete(url: string): Promise<VrmAthlete | null> {
   if (refused.has(url)) return null
-  const buffer = await fetchModel(url)
+  const [buffer, libraries] = await Promise.all([
+    timed('pb:vrm:download', fetchModel(url)),
+    timed('pb:vrm:library', loadLibraries()),
+  ])
   if (!buffer) return null
   try {
-    const [{ GLTFLoader }, { VRMLoaderPlugin, VRMUtils }] = await Promise.all([
-      import('three/addons/loaders/GLTFLoader.js'),
-      import('@pixiv/three-vrm'),
-    ])
+    const { GLTFLoader, VRMLoaderPlugin, VRMUtils } = libraries
     const loader = new GLTFLoader()
     loader.register((parser) => new VRMLoaderPlugin(parser))
-    const gltf = await loader.parseAsync(buffer, '')
+    const gltf = await timed('pb:vrm:parse', loader.parseAsync(buffer, ''))
     const vrm = gltf.userData.vrm as VRM | undefined
     if (!vrm?.humanoid || vrm.meta.metaVersion !== '1') {
       disposeTree(gltf.scene)
       refused.add(url)
       return null
     }
+    const t0 = performance.now()
     VRMUtils.removeUnnecessaryVertices(gltf.scene)
     VRMUtils.combineSkeletons(gltf.scene)
     vrm.scene.traverse((o) => (o.frustumCulled = false))
-    return vrmAthlete(vrm)
+    const athlete = vrmAthlete(vrm)
+    performance.measure('pb:vrm:setup', { start: t0, end: performance.now() })
+    return athlete
   } catch (e) {
     console.warn('[pickleball] VRM model could not be used', e)
     refused.add(url)
     return null
   }
+}
+
+let libraries: Promise<{
+  GLTFLoader: typeof GLTFLoader
+  VRMLoaderPlugin: typeof VRMLoaderPlugin
+  VRMUtils: typeof VRMUtils
+}> | null = null
+
+/** The glTF loader and three-vrm, downloaded once, only when a VRM is about to be used. */
+function loadLibraries() {
+  libraries ??= Promise.all([
+    import('three/addons/loaders/GLTFLoader.js'),
+    import('@pixiv/three-vrm'),
+  ]).then(([gltf, vrm]) => ({
+    GLTFLoader: gltf.GLTFLoader,
+    VRMLoaderPlugin: vrm.VRMLoaderPlugin,
+    VRMUtils: vrm.VRMUtils,
+  }))
+  return libraries
 }
 
 /** Files found not to be usable: not parsed again on this page. */

@@ -434,7 +434,7 @@ async function serveAndWatch(
   browser: Browser,
   serve: (page: Page, aim: { x: number; y: number }) => Promise<void>,
   name = 'Alice',
-): Promise<{ vx: number[]; x: number }> {
+): Promise<{ vx: number[]; x: number; samples: number; shot: unknown }> {
   const alice = await openPlayer(browser, '/?e2e=1')
   await alice.page.getByTestId('nickname').fill(name)
   await alice.page.getByTestId('create-room').click()
@@ -455,19 +455,25 @@ async function serveAndWatch(
 
   const seen = bob.page.evaluate(
     () =>
-      new Promise<{ vx: number[]; x: number }>((resolve) => {
+      new Promise<{ vx: number[]; x: number; samples: number }>((resolve) => {
         const vx: number[] = []
+        // How often the ball was seen in flight: a few distinct speeds out of many samples
+        // means a straight serve; few samples means this page was starved.
+        let samples = 0
         const started = performance.now()
         const timer = setInterval(() => {
           const s = window.__PB__.state()
           const flying = s?.phase === 'rally' && !s.ball.held
           if (flying && s.ball.z < -4.5) {
             clearInterval(timer)
-            resolve({ vx, x: s.ball.x })
+            resolve({ vx, x: s.ball.x, samples })
           } else if (performance.now() - started > 15000) {
             clearInterval(timer)
-            resolve({ vx: [], x: 99 })
-          } else if (flying && vx.at(-1) !== s.ball.vx) vx.push(s.ball.vx)
+            resolve({ vx: [], x: 99, samples })
+          } else if (flying) {
+            samples++
+            if (vx.at(-1) !== s.ball.vx) vx.push(s.ball.vx)
+          }
         }, 8)
       }),
   )
@@ -477,15 +483,19 @@ async function serveAndWatch(
   await alice.page.waitForTimeout(200)
   await serve(alice.page, aim!)
   const result = await seen
+  // The serve as Alice's input saw it (curve and mouse speed), for any failure message.
+  const shot = await alice.page.evaluate(() =>
+    (window as unknown as { __PB__: { localShot(): unknown } }).__PB__.localShot(),
+  )
   expect(alice.errors, alice.errors.join('\n')).toEqual([])
   expect(bob.errors, bob.errors.join('\n')).toEqual([])
   await alice.context.close()
   await bob.context.close()
-  return result
+  return { ...result, shot }
 }
 
 test('swiping the mouse while serving curves the ball to the right', async ({ browser }) => {
-  const { vx, x } = await serveAndWatch(browser, async (page, aim) => {
+  const { vx, x, samples, shot } = await serveAndWatch(browser, async (page, aim) => {
     // A real-time swipe with the real mouse: to the right, serving partway through it.
     const width = page.viewportSize()!.width
     const started = Date.now()
@@ -494,7 +504,8 @@ test('swiping the mouse while serving curves the ball to the right', async ({ br
     }
     await page.keyboard.press('Space')
   })
-  expect(vx.length).toBeGreaterThan(3)
+  const why = `serve as Alice's input saw it: ${JSON.stringify(shot)}; Bob saw ${vx.length} speeds in ${samples} samples`
+  expect(vx.length, why).toBeGreaterThan(3)
   expect(vx.at(-1)! - vx[0]!).toBeGreaterThan(2) // pushed toward +x, her right
   expect(x).toBeLessThan(-0.5) // and still heading for the box she aimed at, on her left
 })

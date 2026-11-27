@@ -10,9 +10,13 @@ import path from 'node:path'
 import { type Browser, type Page, expect, test } from '@playwright/test'
 import { E2E_DEV_KEY } from '../playwright.config'
 
-const SAMPLE = path.resolve(
+// The real model if one is on this computer (kept out of Git), else the prototype sample.
+const X1 = path.resolve('apps/client/public/models/private/x1.vrm')
+const PROTOTYPE = path.resolve(
   'apps/client/public/models/private/prototype/VRM1_Constraint_Twist_Sample.vrm',
 )
+const haveX1 = existsSync(X1)
+const SAMPLE = haveX1 ? X1 : PROTOTYPE
 const haveSample = existsSync(SAMPLE)
 
 const { Client } = createRequire(path.resolve('apps/client/package.json'))('@colyseus/sdk') as {
@@ -49,13 +53,17 @@ async function open(browser: Browser, url: string, model: Model) {
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text())
   })
-  await page.route('**/models/private/x1.vrm', (r) => {
-    asked.push(r.request().url())
-    if (model === 'sample') return r.fulfill({ path: SAMPLE })
-    if (model === 'garbage') return r.fulfill({ body: 'glTF and then nonsense, not a model' })
-    if (model === 'page') return r.fulfill({ contentType: 'text/html', body: '<!doctype html>' })
-    return r.fulfill({ status: 404, body: '' })
-  })
+  // By path only: the viewer's own address may name the file in its query string.
+  await page.route(
+    (u) => u.pathname === '/models/private/x1.vrm',
+    (r) => {
+      asked.push(r.request().url())
+      if (model === 'sample') return r.fulfill({ path: SAMPLE })
+      if (model === 'garbage') return r.fulfill({ body: 'glTF and then nonsense, not a model' })
+      if (model === 'page') return r.fulfill({ contentType: 'text/html', body: '<!doctype html>' })
+      return r.fulfill({ status: 404, body: '' })
+    },
+  )
   await page.goto(url)
   return { context, page, errors, asked }
 }
@@ -81,13 +89,18 @@ async function trainAsTezuka(browser: Browser, model: Model, query = '') {
 }
 
 test.describe('without its own model', () => {
-  test('Tezuka is drawn with the stand-in, left-handed, and nothing is asked for', async ({
+  test('Tezuka is drawn with the stand-in, left-handed; asked for only if the build has one', async ({
     browser,
   }) => {
     const t = await trainAsTezuka(browser, 'missing')
     expect((await paddleBones(t.page)).Tezuka).toBe('hand_l')
-    expect(t.asked).toEqual([])
-    expect(t.errors, t.errors.join('\n')).toEqual([])
+    // A build that found x1.vrm asks for it (here the request gets a 404); one that
+    // didn't never asks, so nobody's browser requests a file that isn't there.
+    expect(t.asked.length).toBe(haveX1 ? 1 : 0)
+    expect(
+      t.errors.filter((e) => !(haveX1 && e.includes('404'))),
+      t.errors.join('\n'),
+    ).toEqual([])
     await t.context.close()
   })
 
@@ -111,8 +124,8 @@ test.describe('without its own model', () => {
   }
 })
 
-test.describe('with the prototype VRM sample', () => {
-  test.skip(!haveSample, 'the prototype sample is not on this computer')
+test.describe(haveX1 ? 'with the real model, x1.vrm' : 'with the prototype VRM sample', () => {
+  test.skip(!haveSample, 'no VRM model on this computer')
 
   test('Tezuka plays in it: left-handed, and the drawn paddle meets the ball', async ({
     browser,
@@ -206,7 +219,11 @@ test.describe('with the prototype VRM sample', () => {
 
   test('the viewer loads it and every reachable stroke meets the ball', async ({ browser }) => {
     test.setTimeout(120_000)
-    const v = await open(browser, '/?viewer&e2e=1', 'missing')
+    const v = await open(
+      browser,
+      `/?viewer&e2e=1&model=/models/private/${haveX1 ? 'x1.vrm' : 'prototype/VRM1_Constraint_Twist_Sample.vrm'}`,
+      'sample',
+    )
     const call = <T>(f: string): Promise<T> =>
       v.page.evaluate(
         // The viewer installs its hook once its page has loaded.
@@ -221,11 +238,11 @@ test.describe('with the prototype VRM sample', () => {
     expect(stats.missing).toEqual([])
     expect(stats.triangles).toBeGreaterThan(1000)
     const gaps = await call<Record<string, number>>('contacts')
-    // This sample is small (head at 1.39 m, against 1.65 m for m1): balls at 1.5 m and
-    // up, and the serve's, are out of its reach. Everything else is met.
+    // The real model is tall enough to meet every stroke. The prototype sample is small
+    // (head at 1.39 m): balls at 1.5 m and up, and the serve's, are out of its reach.
+    const outOfReach = haveX1 ? [] : ['shoulder high', 'smash', 'jump smash', 'serve']
     for (const [stroke, gap] of Object.entries(gaps))
-      if (!['shoulder high', 'smash', 'jump smash', 'serve'].includes(stroke))
-        expect(gap, stroke).toBeLessThan(0.14)
+      if (!outOfReach.includes(stroke)) expect(gap, stroke).toBeLessThan(0.14)
     expect(v.errors, v.errors.join('\n')).toEqual([])
     await v.context.close()
   })

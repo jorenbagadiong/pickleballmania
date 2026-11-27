@@ -12,6 +12,7 @@ import type {
 } from 'three'
 import { type Athlete, loadBody, loadMotions } from './assets'
 import { Controller } from './controller'
+import { timed } from './timing'
 import type { VrmAthlete } from './vrm'
 import { useUi } from '../../state/store'
 import { handFor } from './handedness'
@@ -31,10 +32,20 @@ const nextFrame = () => new Promise<void>((done) => requestAnimationFrame(() => 
 async function prepare(gl: WebGLRenderer, root: Object3D, camera: Camera, scene: Scene) {
   const textures = new Set<Texture>()
   root.traverse((o) => {
-    const m = (o as Mesh).material as Material | undefined
-    if (!m) return
-    for (const value of Object.values(m))
-      if ((value as Texture | null)?.isTexture) textures.add(value as Texture)
+    const mesh = o as Mesh
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : mesh.material
+        ? [mesh.material]
+        : []
+    for (const m of materials as Material[]) {
+      for (const value of Object.values(m))
+        if ((value as Texture | null)?.isTexture) textures.add(value as Texture)
+      // Shader materials (a VRM body's MToon) keep their textures in uniforms.
+      const uniforms = (m as { uniforms?: Record<string, { value: unknown }> }).uniforms
+      for (const u of Object.values(uniforms ?? {}))
+        if ((u.value as Texture | null)?.isTexture) textures.add(u.value as Texture)
+    }
   })
   const compiled = gl.compileAsync(root, camera, scene)
   // One picture per frame: sending them all at once is a stutter of its own.
@@ -54,7 +65,7 @@ export function useAthlete(name: string, color: string, shadow: boolean): Loaded
 
   useEffect(() => {
     let gone = false
-    Promise.all([loadBody(name), loadMotions()])
+    Promise.all([timed(`pb:body:${name}`, loadBody(name)), loadMotions()])
       .then(async ([athlete, motions]) => {
         if (gone) return
         athlete.root.traverse((o) => {
@@ -64,7 +75,7 @@ export function useAthlete(name: string, color: string, shadow: boolean): Loaded
           m.receiveShadow = shadow
         })
         // If this fails the body is still shown; drawing it just costs a stutter.
-        await prepare(gl, athlete.root, camera, scene).catch(() => {})
+        await timed(`pb:prepare:${name}`, prepare(gl, athlete.root, camera, scene)).catch(() => {})
         if (gone) return
         setLoaded({ athlete, controller: new Controller(athlete, motions, handFor(name)) })
       })

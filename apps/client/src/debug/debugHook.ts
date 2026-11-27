@@ -122,6 +122,8 @@ export function installDebugHook(): void {
       hits: () => startHitLog(),
       /** Since `hits()` was first called: the worst drawn-versus-controller paddle gap (m). */
       fidelity: () => worstFidelity,
+      /** The local player's last swing or serve as the input saw it (curve, mouse speed). */
+      localShot: () => ({ ...frame.localShot, aim: { ...frame.localShot.aim } }),
       /** Renderer counters for the last frame. */
       render: () => {
         const info = frame.gl?.info
