@@ -1,4 +1,4 @@
-import type { Camera } from 'three'
+import type { Camera, Scene } from 'three'
 import type { WorldSample } from '../net/snapshots'
 
 /**
@@ -39,4 +39,6 @@ export const frame = {
   cheerStrength: 0,
   /** The active camera (used by the debug hook to project world points). */
   camera: null as Camera | null,
+  /** The scene (read by the debug hook only). */
+  scene: null as Scene | null,
 }

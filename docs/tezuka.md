@@ -10,7 +10,8 @@ deliberately overpowered and never available in tournaments.
 | Done    | The secret look `x1` (`SECRET_LOOK`), given by the server and chosen by nobody   |
 | Done    | Held curves (Q, E, right mouse button), exactly as the `cheater` name gets them  |
 | Done    | The TEZUKA ZONE passive: incoming opponent shots bend toward this player (below) |
-| Not yet | A model of its own, left-handed animation and zone effects (Phases C and D)      |
+| Done    | Left-handed play on the existing motions, strokes and IK (Phase C2, below)       |
+| Not yet | A model of its own and zone effects (Phases C1, C3 and D)                        |
 
 **Model fallback:** `x1` has no model yet, so it is drawn with the public athlete `m1`
 (`SECRET_LOOK_FALLBACK` in `apps/client/src/players/athlete/assets.ts`). While it is on
@@ -256,3 +257,114 @@ the speed spent. With `?e2e` (or in dev), the client exposes it as `__PB__.zone(
 
 A server tick with the zone steering a shot: median 0.001 ms, p99 0.044 ms, worst seen
 0.84 ms (JIT warm-up). Without the zone: median 0.0004 ms. The tick budget is 16.7 ms.
+
+## Left-handed animation (Phase C2)
+
+The secret athlete holds the paddle in the left hand; the six public athletes stay
+right-handed. `handFor(look)` in `apps/client/src/players/athlete/handedness.ts`
+decides it: `left` for `x1`, `right` for everything else. It works on the `m1` stand-in
+today and needs nothing from the future model.
+
+### How: the mirror
+
+Every bone of the athletes rests with the identity rotation, its axes those of the model
+(+x the body's left). So a body mirrored across its middle is the same skeleton with left
+and right swapped, and a left-hander can be animated as a right-hander in that mirror:
+
+1. **In:** the controller is built with the mirrored rest skeleton (`mirrorRest`) and the
+   mirrored left-hand grip (`mirrorGrip(gripFor(athlete, 'l'))`). Each frame, what the game
+   says is mirrored across the line the player faces along (`WorldMirror`: velocity, where
+   to look, the ball held to serve), and so is every contact point (`hit`, `correct`).
+2. **Animate:** the unchanged right-handed code runs: captured motions, gait mixing, every
+   stroke, arm and leg IK, wrist limits, the free arm, jumps and lunges.
+3. **Out:** the finished pose is mirrored back (`mirrorPose`): left and right bones swap,
+   each rotation (x, y, z, w) becomes (x, -y, -z, w), and the hips' sideways offset changes
+   sign.
+
+The mesh is never scaled by -1 (skinning, normals and shadows stay as they are). The
+paddle is attached to `hand_l` with a grip measured from the left hand's own finger bones
+(`gripFor(athlete, 'l')`), and the left fingers curl round the handle while the right ones
+relax (`poseFingers(athlete, 'l')`). Forehand and backhand follow: for a left-hander, a ball
+on their left is a forehand.
+
+Nothing on the server changes: the hit radius, reach, physics and the zone are the same.
+The zone already aims at the left side (`contactSide` in `zone.ts`), and a test checks that
+the left-handed ready paddle sits inside its contact disk.
+
+### Checked
+
+- **Right-handed regression** (`apps/client/test/rightHanded.test.ts`): snapshots recorded
+  before handedness existed. 18 scenarios on `m1` (idle, ready, walking, running, both
+  strafes, backpedal, diagonal, looking, serve, forehand, backhand, dink, volley, smash,
+  jump smash, a wide shot at a run, celebrating) and forehand, backhand and jump smash on
+  all six athletes. Every bone, finger and the grip must match to 1e-5; they do.
+- **Mirror twin** (`apps/client/test/leftHanded.test.ts`): a left-hander on a mirror copy of
+  `m1`, given the mirrored game, produces the mirror of the right-hander's pose on every
+  frame (component difference under 1e-5), through all of the above plus sprinting and
+  every stroke through its recovery. This checks gait, strokes, IK, grip and fingers at once.
+- **On the stand-in body:** the paddle meets the ball within 14 cm at contact for all 13
+  stroke spots (as for right-handers), a jump smash leaves the ground with the left arm
+  over the top and lands, every swing returns to ready without snapping, feet stay
+  planted while running, strafing and backpedaling (the right-handed limits), finger curl,
+  stroke choice, and nonsense input.
+- **Zone alignment:** the ready paddle is on the left inside the zone's disk; balls brought
+  to the disk's middle at 0.6, 0.95 and 1.3 m are forehands, met within 14 cm.
+- **Browsers** (`e2e/leftHanded.spec.ts`): in singles (Tezuka's view, the opponent's and a
+  spectator's), doubles and training, Tezuka's paddle hangs from `hand_l` and every other
+  player's from `hand_r`. `Tezuka` without the key is right-handed.
+- **Cost:** the mirroring adds about 0.002 ms per player per frame (controller median
+  0.0335 ms right-handed, 0.0351 ms left-handed). No extra draw calls, materials or memory.
+
+### Limits
+
+- While the model downloads, a player is drawn as the simple placeholder figure, which is
+  always right-handed (a second or so).
+- The mirror is exact for a symmetric body. `m1` is nearly symmetric; a future model with
+  asymmetric clothing or hair still animates correctly (the skeleton is what's mirrored),
+  but its own asymmetry is not mirrored.
+- The captured motions are mirrored too, so the left-hander's walk and run are the mirror
+  of everyone else's. That is intended (a natural left-footed gait), but it means two players
+  never share an identical stride.
+- Smoothness and foot sliding were measured in tests and seen in screenshots, not judged
+  by eye on a fast GPU. See "Checking it on Windows" below.
+
+### Test record
+
+- **Client unit tests: 128 before C2, 210 after.** The 82 new tests are 58 in
+  `leftHanded.test.ts` and 24 in `rightHanded.test.ts`. All 128 earlier tests are still
+  there under the same names, and none of their assertions changed: `athlete.test.ts`
+  only had its model-reading helpers moved, word for word, into `test/fixtures/athletes.ts`.
+  (The first C2 report said "up from 119"; that was wrong. 119 was the count at `244771a`,
+  before Phases A and B.)
+- **Browser tests: 21 before C2, 24 after** (the three in `e2e/leftHanded.spec.ts`). All 24
+  pass on the computer C2 was made on, and so do all 21 at the pre-C2 commit `92ec28e`
+  there. The six failures reported during Phase B were seen on another computer and do not
+  reproduce on this one even without C2, so C2 did not fix them. Their cause is not known
+  from here.
+- **The two environments:** C2 was tested on macOS 12.7.6 with installed Google Chrome 150
+  (rendering on the GPU, about 50–55 fps in the game) and Playwright 1.65.1. Phases A and B
+  were committed from a different computer, and the brief mentions a software-rendered
+  browser at about 5 fps there; a browser that slow can miss timing-sensitive steps in
+  the multiplayer tests.
+
+### Not yet checked by eye
+
+These need a person watching on a fast GPU (steps below): smooth blending between motions
+at full frame rate, foot sliding as seen rather than measured, how natural the mirrored
+strokes look in motion (forehand, backhand, dink, volley, smash, jump smash, recovery), and
+the paddle staying in the hand through fast swings at the Close camera.
+
+### Checking it on Windows
+
+1. On a computer with these changes, in PowerShell:
+   `$env:PICKLEBALL_DEV_KEY='a-long-random-secret'; yarn dev`.
+2. Open `http://localhost:5173` (the address `yarn dev` prints), enter `Tezuka`, type the
+   key, and start **Training**.
+3. With the ball machine on, watch from the default camera and the **Close** camera:
+   the paddle stays in the left hand; forehands are on the left; backhands cross the body;
+   serves are underhand with the left arm; Shift + swing on a high ball smashes left-handed;
+   W + Shift + swing jumps.
+4. Run in every direction and stop suddenly: feet should not skate, and nothing should snap.
+5. Open a second browser as `Bob` in a casual room created with
+   **Allow developer abilities**: from Bob's side, Tezuka faces you with the paddle on the
+   screen's right.

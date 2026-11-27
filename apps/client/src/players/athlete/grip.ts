@@ -7,7 +7,7 @@ export const PADDLE_SCALE = 0.8
 const FACE_CENTER = 0.37
 
 /**
- * How the paddle sits in the right hand: a handshake grip, the handle across the palm
+ * How the paddle sits in the paddle hand: a handshake grip, the handle across the palm
  * and the face lined up with it. Positions are in the hand's rest frame.
  */
 export interface Grip {
@@ -37,8 +37,9 @@ function palm(a: Athlete, side: 'l' | 'r') {
   return { wrist, fingers, across, normal, length }
 }
 
-export function gripFor(a: Athlete): Grip {
-  const { fingers, across, normal, length } = palm(a, 'r')
+/** The grip in one hand ('r' unless the player is left-handed), from that hand's bones. */
+export function gripFor(a: Athlete, side: 'l' | 'r' = 'r'): Grip {
+  const { fingers, across, normal, length } = palm(a, side)
   // The handle lies on a slant, so the paddle continues the line of a relaxed arm.
   const shaft = across.clone().multiplyScalar(0.78).addScaledVector(fingers, 0.62).normalize()
   const face = normal.clone().addScaledVector(shaft, -normal.dot(shaft)).normalize()
@@ -53,27 +54,30 @@ export function gripFor(a: Athlete): Grip {
   return { position, rotation, center }
 }
 
-/** Curls the fingers: around the handle on the right, relaxed on the left. */
-export function poseFingers(a: Athlete): void {
+/**
+ * Curls the fingers: around the handle in the paddle hand ('r' unless left-handed),
+ * relaxed in the other.
+ */
+export function poseFingers(a: Athlete, paddleSide: 'l' | 'r' = 'r'): void {
   for (const side of ['l', 'r'] as const) {
+    const holds = side === paddleSide
     const { across, normal, fingers } = palm(a, side)
     // Turning around the knuckles, so that the tips go toward the palm.
     const axis = across.clone()
     if (axis.clone().cross(fingers).dot(normal) < 0) axis.negate()
-    const bend = side === 'r' ? [1.0, 1.25, 0.75] : [0.28, 0.4, 0.28]
+    const bend = holds ? [1.0, 1.25, 0.75] : [0.28, 0.4, 0.28]
     const q = new Quaternion()
     for (const finger of ['index', 'middle', 'ring', 'pinky']) {
       for (let k = 1; k <= 3; k++) {
         const bone = a.all.get(`${finger}_0${k}_${side}`)
-        const loose =
-          side === 'l' ? 1 + ['index', 'middle', 'ring', 'pinky'].indexOf(finger) * 0.12 : 1
+        const loose = holds ? 1 : 1 + ['index', 'middle', 'ring', 'pinky'].indexOf(finger) * 0.12
         if (bone) bone.quaternion.copy(q.setFromAxisAngle(axis, (bend[k - 1] ?? 0) * loose))
       }
     }
     // The thumb closes over the handle.
     const close = fingers.clone()
     if (close.clone().cross(across).dot(normal) < 0) close.negate()
-    const thumb = side === 'r' ? [0.15, 0.4, 0.5] : [0, 0.15, 0.2]
+    const thumb = holds ? [0.15, 0.4, 0.5] : [0, 0.15, 0.2]
     for (let k = 1; k <= 3; k++) {
       const bone = a.all.get(`thumb_0${k}_${side}`)
       if (bone) bone.quaternion.copy(q.setFromAxisAngle(close, thumb[k - 1] ?? 0))

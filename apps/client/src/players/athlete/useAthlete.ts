@@ -12,6 +12,7 @@ import type {
 } from 'three'
 import { type Athlete, loadAthlete, loadMotions } from './assets'
 import { Controller } from './controller'
+import { handFor } from './handedness'
 
 export interface LoadedAthlete {
   athlete: Athlete
@@ -63,7 +64,7 @@ export function useAthlete(name: string, color: string, shadow: boolean): Loaded
         // If this fails the body is still shown; drawing it just costs a stutter.
         await prepare(gl, athlete.root, camera, scene).catch(() => {})
         if (gone) return
-        setLoaded({ athlete, controller: new Controller(athlete, motions) })
+        setLoaded({ athlete, controller: new Controller(athlete, motions, handFor(name)) })
       })
       .catch((e: unknown) => console.warn('[pickleball] player model', name, e))
     return () => {

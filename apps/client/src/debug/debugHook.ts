@@ -1,5 +1,5 @@
 import { WIRE, fromWire } from '@pickleball/shared'
-import { Vector3 } from 'three'
+import { type Object3D, Vector3 } from 'three'
 import { frame } from '../game/frame'
 import { SERVER_URL } from '../net/config'
 import {
@@ -91,6 +91,27 @@ export function installDebugHook(): void {
       zone: () => latestZoneDebug(),
       /** Every ball state decoded from now on, by server tick (court 1). */
       ballLog: () => Object.fromEntries(startBallLog()),
+      /**
+       * Every paddle drawn: whose it is, which bone holds it, and where it and both
+       * hands are in the world.
+       */
+      paddles: () => {
+        const out: { player: string; bone: string; paddle: number[]; hands: number[][] }[] = []
+        const at = (o: Object3D | undefined): number[] =>
+          o ? o.getWorldPosition(new Vector3()).toArray() : []
+        frame.scene?.traverse((o) => {
+          if (o.name !== 'paddle' || !o.parent) return
+          let body: Object3D | null = o.parent
+          while (body && !body.getObjectByName('hand_l')) body = body.parent
+          out.push({
+            player: String(o.userData.player ?? ''),
+            bone: o.parent.name,
+            paddle: at(o),
+            hands: [at(body?.getObjectByName('hand_l')), at(body?.getObjectByName('hand_r'))],
+          })
+        })
+        return out
+      },
       /** Where the camera is, and which court is in focus. */
       camera: () => {
         const p = frame.camera?.position

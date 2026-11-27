@@ -1,14 +1,16 @@
 import { Matrix4, Quaternion, Vector3 } from 'three'
 import type { Athlete } from './assets'
 import { type Grip, gripFor, poseFingers } from './grip'
+import { type Hand, WorldMirror, mirrorGrip, mirrorPose, mirrorRest, sideOf } from './handedness'
 import { type Twist, reach, stand } from './ik'
 import { type Motions, gaitFor, gaitPose } from './locomotion'
-import { BONE, BONES, Figure, Pose, UPPER, sample } from './skeleton'
+import { BONE, BONES, Figure, Pose, type Rest, UPPER, sample } from './skeleton'
 import {
   PaddleState,
   READY,
   STROKES,
   type ShotInfo,
+  type StrokeName,
   type Swing,
   chooseStroke,
   effort,
@@ -74,9 +76,22 @@ function ease(from: number, to: number, rate: number, delta: number): number {
  * Animates one athlete: captured motions for the body and legs, mixed by speed and
  * direction; strokes on top, with the arm solved so that the paddle meets the ball; feet
  * kept on the ground when the body sinks or lunges. Reads game state, never changes it.
+ *
+ * Everything below is written for a right-hander. A left-hander is animated as the
+ * right-hander in the mirror (see handedness.ts): the body, the grip and what the game
+ * says are mirrored on the way in, and the finished pose on the way out.
  */
 export class Controller {
   private readonly fig: Figure
+  /** Where the joints are at rest on the body being animated (mirrored for a left-hander). */
+  private readonly rest: Rest
+  private readonly left: boolean
+  private readonly mirror = new WorldMirror()
+  private readonly mirrored = new Pose()
+  private readonly lookAt = new Vector3()
+  private readonly ballAt = new Vector3()
+  /** The grip on the real paddle hand, and as the (possibly mirrored) body holds it. */
+  private readonly handGrip: Grip
   private readonly base = new Pose()
   private readonly pose = new Pose()
   private readonly mood = new Pose()
@@ -94,6 +109,7 @@ export class Controller {
   private readonly want = new PaddleState()
   private readonly ready = new PaddleState()
   private swing: Swing | null = null
+  private lastStroke: StrokeName | null = null
   private readonly hand = new Quaternion()
   private readonly lastFore = new Quaternion()
   private readonly twist: Twist = { angle: 0 }
@@ -119,20 +135,37 @@ export class Controller {
   constructor(
     private readonly athlete: Athlete,
     private readonly motions: Motions,
+    readonly paddleHand: Hand = 'right',
   ) {
-    this.fig = new Figure(athlete.rest)
-    this.grip = gripFor(athlete)
-    poseFingers(athlete)
+    this.left = paddleHand === 'left'
+    this.rest = this.left ? mirrorRest(athlete.rest) : athlete.rest
+    this.fig = new Figure(this.rest)
+    this.handGrip = gripFor(athlete, sideOf(paddleHand))
+    this.grip = this.left ? mirrorGrip(this.handGrip) : this.handGrip
+    poseFingers(athlete, sideOf(paddleHand))
   }
 
-  /** Where the paddle goes in the hand. */
+  /** Where the paddle goes in the paddle hand (`paddleBone`). */
   get paddleGrip(): Grip {
-    return this.grip
+    return this.handGrip
   }
 
-  /** Starts a shot. `contact` is in the world; `contactAt` when it meets the ball. */
+  /** The bone that holds the paddle. */
+  get paddleBone(): 'hand_r' | 'hand_l' {
+    return this.left ? 'hand_l' : 'hand_r'
+  }
+
+  /** The last stroke started, as the player would call it (forehand on their paddle side). */
+  get stroke(): StrokeName | null {
+    return this.lastStroke
+  }
+
+  /** Starts a shot. `contact` is in the feet frame; `contactAt` when it meets the ball. */
   hit(now: number, shot: ShotInfo, contactAt: number): void {
-    const stroke = STROKES[chooseStroke(shot)]
+    if (this.left) shot = { ...shot, contact: { ...shot.contact, x: -shot.contact.x } }
+    const name = chooseStroke(shot)
+    this.lastStroke = name
+    const stroke = STROKES[name]
     const from = new PaddleState().copy(this.paddle)
     const c = shot.contact
     this.swing = {
@@ -142,7 +175,7 @@ export class Controller {
       contactAt: Math.max(now + stroke.swing * 0.6, contactAt),
       contact: new Vector3(c.x, c.y, c.z),
       jump: shot.jump,
-      shoulder: this.athlete.rest[BONE.upperarm_r]!,
+      shoulder: this.rest[BONE.upperarm_r]!,
     }
     if (shot.jump) this.jumpAt = now
   }
@@ -151,7 +184,7 @@ export class Controller {
   correct(contact: { x: number; y: number; z: number }, contactAt: number, now: number): void {
     const s = this.swing
     if (!s || swingOver(s, now) || s.contactAt < now - 0.12) return
-    s.contact.set(contact.x, contact.y, contact.z)
+    s.contact.set(this.left ? -contact.x : contact.x, contact.y, contact.z)
     s.contactAt = Math.max(now, Math.min(contactAt, s.contactAt + 0.25))
   }
 
@@ -160,6 +193,7 @@ export class Controller {
   }
 
   update(input: Input): void {
+    if (this.left) input = this.mirrorInput(input)
     const { now, delta } = input
     const dt = Math.min(delta, 0.1)
     this.locomotion(input, dt)
@@ -217,8 +251,8 @@ export class Controller {
     if (jump.air > 0.02) this.legsInAir(jump.air)
     else {
       // Never below the ground, whatever was blended.
-      const floorL = this.athlete.rest[BONE.foot_l]!.y
-      const floorR = this.athlete.rest[BONE.foot_r]!.y
+      const floorL = this.rest[BONE.foot_l]!.y
+      const floorR = this.rest[BONE.foot_r]!.y
       const under = ankleL.y < floorL - 0.004 || ankleR.y < floorR - 0.004
       ankleL.y = Math.max(ankleL.y, floorL)
       ankleR.y = Math.max(ankleR.y, floorR)
@@ -229,6 +263,19 @@ export class Controller {
     this.arms(input, push, jump.lift)
     this.lift = jump.lift
     this.write()
+  }
+
+  /** What the game says, as the mirrored body sees it. */
+  private mirrorInput(input: Input): Input {
+    const m = this.mirror.set(input.yaw, input.x, input.z)
+    const v = m.direction(input.vx, input.vz)
+    return {
+      ...input,
+      vx: v.x,
+      vz: v.z,
+      look: input.look && m.point(input.look, this.lookAt),
+      serveBall: input.serveBall && m.point(input.serveBall, this.ballAt),
+    }
   }
 
   // ---------------------------------------------------------------- layers
@@ -409,8 +456,8 @@ export class Controller {
     if (swing) {
       const shoulder = this.fig.p[BONE.upperarm_r]!
       const arm =
-        this.athlete.rest[BONE.upperarm_r]!.distanceTo(this.athlete.rest[BONE.lowerarm_r]!) +
-        this.athlete.rest[BONE.lowerarm_r]!.distanceTo(this.athlete.rest[BONE.hand_r]!) +
+        this.rest[BONE.upperarm_r]!.distanceTo(this.rest[BONE.lowerarm_r]!) +
+        this.rest[BONE.lowerarm_r]!.distanceTo(this.rest[BONE.hand_r]!) +
         this.grip.center.length() * 0.85
       v2.copy(swing.contact).sub(shoulder)
       const flat = Math.hypot(v2.x, v2.z)
@@ -461,7 +508,7 @@ export class Controller {
     hand.copy(this.hand)
 
     // Strokes are laid out around someone of average height, standing.
-    const tall = this.athlete.rest[BONE.upperarm_r]!.y / 1.5
+    const tall = this.rest[BONE.upperarm_r]!.y / 1.5
     const loose = this.swing ? 1 - push : 1
     const at = paddle.at.clone()
     at.y += ((tall - 1) * at.y + (this.base.pelvis.y + pose.pelvis.y) * 0.35) * loose
@@ -504,10 +551,7 @@ export class Controller {
   /** A wrist only bends so far: keeps a hand within reach of where the forearm points. */
   private holdable(hand: Quaternion): void {
     const fore = this.fig.r[BONE.lowerarm_r]!
-    const axis = v1
-      .copy(this.athlete.rest[BONE.hand_r]!)
-      .sub(this.athlete.rest[BONE.lowerarm_r]!)
-      .normalize()
+    const axis = v1.copy(this.rest[BONE.hand_r]!).sub(this.rest[BONE.lowerarm_r]!).normalize()
     // Without the turn along the forearm, what is left is the bend.
     const now = v2.copy(axis).applyQuaternion(this.lastFore)
     const then = v3.copy(axis).applyQuaternion(hand)
@@ -539,7 +583,7 @@ export class Controller {
       w = 0.75 * push
     } else {
       // Near the throat of the paddle.
-      v1.set(0.12, 1.02 * (this.athlete.rest[BONE.upperarm_r]!.y / 1.5), 0.36)
+      v1.set(0.12, 1.02 * (this.rest[BONE.upperarm_r]!.y / 1.5), 0.36)
       v1.y += pose.pelvis.y * 0.5
       w = this.paddleHold * this.alert * 0.9
     }
@@ -558,7 +602,8 @@ export class Controller {
 
   private write(): void {
     const { bones, rest } = this.athlete
-    for (let i = 0; i < BONES.length; i++) bones[i]!.quaternion.fromArray(this.pose.q, i * 4)
-    bones[BONE.pelvis]!.position.copy(rest[BONE.pelvis]!).add(this.pose.pelvis)
+    const pose = this.left ? mirrorPose(this.pose, this.mirrored) : this.pose
+    for (let i = 0; i < BONES.length; i++) bones[i]!.quaternion.fromArray(pose.q, i * 4)
+    bones[BONE.pelvis]!.position.copy(rest[BONE.pelvis]!).add(pose.pelvis)
   }
 }

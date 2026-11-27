@@ -1,9 +1,9 @@
 # Secret athlete, Phase C plan: character model and left-handed animation
 
-Status: **planned, not started.** Waiting on two approvals: the asset route (D below),
-and installing `numpy` and `pillow` into a gitignored virtual environment. Phases A
-(authorization, `1eb4c28`) and B (TEZUKA ZONE, `c9a815b`) are done; see
-[tezuka.md](tezuka.md).
+Status: **C2 (left-handed animation) done**; see [tezuka.md](tezuka.md). The asset
+route below is **superseded** by the revised research, conversion comparison and design
+specification in [tezuka-character.md](tezuka-character.md), which waits for approval.
+Phases A (authorization, `1eb4c28`) and B (TEZUKA ZONE, `c9a815b`) are done.
 
 The character is an **original design** in this archetype: a tall, lean, composed,
 left-handed captain with glasses, a navy and white kit and premium anime shading. It is

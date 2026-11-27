@@ -176,6 +176,7 @@ export function GameLoop() {
     frame.courts = sampleCourts(now)
     frame.world = frame.courts[focusCourt()] ?? null
     frame.camera = state.camera
+    frame.scene = state.scene
 
     // Aim: where the mouse ray meets the ground. While a curve is held it stays put, as
     // the mouse is busy choosing the bend.

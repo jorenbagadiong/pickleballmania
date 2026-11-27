@@ -1,0 +1,517 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the six right-handed athletes move exactly as before > f1: forehand, backhand and jump smash 1`] = `
+{
+  "backhand": {
+    "fingers": "a377ee821703b7fb",
+    "frame 100": "aef5f71314083df0",
+    "frame 130": "74aa6a4d2d6aa067",
+    "frame 20": "7fc5b7cc1fdd4685",
+    "frame 58": "2a5a26199b31256c",
+    "frame 66": "b145aab1ecc74813",
+    "frame 72": "93c701ee32db4f8f",
+    "frame 76": "2b37d93b7c5311ad",
+    "frame 84": "dab3e6381f5d4baa",
+    "grip": "fb1eb823b95d70da",
+  },
+  "forehand": {
+    "fingers": "a377ee821703b7fb",
+    "frame 100": "15292bff70b9229e",
+    "frame 130": "6c2d758c180901e0",
+    "frame 20": "71f6ac858b50c5fd",
+    "frame 58": "c135eb8e4849bc4e",
+    "frame 66": "a703d31c4bb15c7a",
+    "frame 72": "e3471774db50e333",
+    "frame 76": "ef4853d02312c525",
+    "frame 84": "72e274d9ff32ca42",
+    "grip": "fb1eb823b95d70da",
+  },
+  "jumpSmash": {
+    "fingers": "a377ee821703b7fb",
+    "frame 100": "d5f8e69b20a5958d",
+    "frame 130": "1ea82fe8d764647b",
+    "frame 20": "e8fd167efe6d5b5b",
+    "frame 58": "e541b5089acead12",
+    "frame 66": "c195490d57f0c8e3",
+    "frame 72": "ac69c82d0e114029",
+    "frame 76": "3b6e5edad2c5435c",
+    "frame 84": "8b38a7b5b9efbf63",
+    "grip": "fb1eb823b95d70da",
+  },
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > f2: forehand, backhand and jump smash 1`] = `
+{
+  "backhand": {
+    "fingers": "1149a223cfa715c3",
+    "frame 100": "fb967e74de09f719",
+    "frame 130": "96a5827e8fbd6032",
+    "frame 20": "863341dbdccec138",
+    "frame 58": "6588d3f584ed1db9",
+    "frame 66": "bfd871a7dcd9c78e",
+    "frame 72": "ead2449a66df812e",
+    "frame 76": "dd0203b58567bac7",
+    "frame 84": "ffa701987a9c98f8",
+    "grip": "c9868a994adfbc92",
+  },
+  "forehand": {
+    "fingers": "1149a223cfa715c3",
+    "frame 100": "a57080889badda8b",
+    "frame 130": "8e8788c5e8d67c3d",
+    "frame 20": "d26096f914ec02af",
+    "frame 58": "633cd2e2da225083",
+    "frame 66": "d78e8efe8801616a",
+    "frame 72": "b1e46c8c9bbf87c4",
+    "frame 76": "03703b64a712741c",
+    "frame 84": "43fa62a94be26210",
+    "grip": "c9868a994adfbc92",
+  },
+  "jumpSmash": {
+    "fingers": "1149a223cfa715c3",
+    "frame 100": "1587989aad02d351",
+    "frame 130": "b95c2f8b2334bd7d",
+    "frame 20": "4e9b0cd4625bfbad",
+    "frame 58": "61f42661a35c5c3f",
+    "frame 66": "dfb9735abd92cd30",
+    "frame 72": "21ac4ab7bcd119a7",
+    "frame 76": "4a430c5c34f6d18b",
+    "frame 84": "0ec7ccf442395016",
+    "grip": "c9868a994adfbc92",
+  },
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > f3: forehand, backhand and jump smash 1`] = `
+{
+  "backhand": {
+    "fingers": "1aca89b79168886b",
+    "frame 100": "9e85fef42cb231ff",
+    "frame 130": "c23a3c81bf6d0695",
+    "frame 20": "f09cd4ed117d217d",
+    "frame 58": "eaf76ae05ec37f2b",
+    "frame 66": "2a699d84de4d0569",
+    "frame 72": "82560b678a89fd48",
+    "frame 76": "a418dce9e7ec0baf",
+    "frame 84": "da01cc0837de2641",
+    "grip": "a3d6e9c2885ce121",
+  },
+  "forehand": {
+    "fingers": "1aca89b79168886b",
+    "frame 100": "49473687915d344f",
+    "frame 130": "5b72215d499b7087",
+    "frame 20": "75f5480650edcad5",
+    "frame 58": "91433c28e2979585",
+    "frame 66": "1a54869d6d7ea353",
+    "frame 72": "70f15403668e8d47",
+    "frame 76": "3cf6140f19624145",
+    "frame 84": "cb220f1f6c58b865",
+    "grip": "a3d6e9c2885ce121",
+  },
+  "jumpSmash": {
+    "fingers": "1aca89b79168886b",
+    "frame 100": "ca6e54f9a55ff7d0",
+    "frame 130": "ba2f7666dc65c013",
+    "frame 20": "06522f0fbc8c9bcf",
+    "frame 58": "1288ad4d3bf1b8bc",
+    "frame 66": "4cedc8c24d631d39",
+    "frame 72": "97a2ca8a54b10e8d",
+    "frame 76": "2cc11b256fea6fe9",
+    "frame 84": "164d64f97c4da711",
+    "grip": "a3d6e9c2885ce121",
+  },
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: backhand 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "554d2055658c244e",
+  "frame 130": "0a509b3959d175a6",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "41ad8ca7622918b4",
+  "frame 72": "019e1d51f7b475b5",
+  "frame 76": "49d6ecc3cef27723",
+  "frame 84": "bd391549dca5520f",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: backpedaling 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "38eb3253023630ea",
+  "frame 130": "46638550ad8e7754",
+  "frame 20": "13b029f9113a9487",
+  "frame 58": "d563d3d4c9d9457b",
+  "frame 66": "78f33978fcb8ba99",
+  "frame 72": "cb95c07ab07282f6",
+  "frame 76": "15ef68db165cb09f",
+  "frame 84": "2fd418d88e1f93ef",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: diagonal 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "a070b6837584b8b4",
+  "frame 130": "e5ed31333c127fac",
+  "frame 20": "04d84c84c458518e",
+  "frame 58": "e00a0832fea543ad",
+  "frame 66": "fe285a2a55dd1298",
+  "frame 72": "c0610ef9031ffc7f",
+  "frame 76": "225cb8b1d971c148",
+  "frame 84": "b8bb7dc1d98f114d",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: dink 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "fb1c5b2499084e44",
+  "frame 130": "f5c3342fb8663490",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "cc4c8ad2c92d0b95",
+  "frame 72": "6ff13e049e108720",
+  "frame 76": "7f894e7026371dea",
+  "frame 84": "d1a54ad2718e8e67",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: forehand 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "d8b85e5eff43a528",
+  "frame 130": "0f6e7dc092d6bb97",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "c6e9db1e169d2b2f",
+  "frame 72": "62a2bea6c4bcee6e",
+  "frame 76": "fcd1c53e67847c95",
+  "frame 84": "1cee451de8a90981",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: forehand, backhand and jump smash 1`] = `
+{
+  "backhand": {
+    "fingers": "eacdb7e237db2f67",
+    "frame 100": "d40b597adfd656c9",
+    "frame 130": "b6d9ace43b945330",
+    "frame 20": "29729edd827d18c6",
+    "frame 58": "4abad32064a455d3",
+    "frame 66": "6e1f7abe0dbc4ad5",
+    "frame 72": "78d8860d21013378",
+    "frame 76": "016d01d314ff09e7",
+    "frame 84": "7884130b62f1aaff",
+    "grip": "65294e3527ebfa65",
+  },
+  "forehand": {
+    "fingers": "eacdb7e237db2f67",
+    "frame 100": "d8b85e5eff43a528",
+    "frame 130": "0f6e7dc092d6bb97",
+    "frame 20": "a93568bbca1b1955",
+    "frame 58": "04980646aceea6b7",
+    "frame 66": "c6e9db1e169d2b2f",
+    "frame 72": "62a2bea6c4bcee6e",
+    "frame 76": "fcd1c53e67847c95",
+    "frame 84": "1cee451de8a90981",
+    "grip": "65294e3527ebfa65",
+  },
+  "jumpSmash": {
+    "fingers": "eacdb7e237db2f67",
+    "frame 100": "abb8435874437358",
+    "frame 130": "f958e257ed39aaf9",
+    "frame 20": "f9a292a9ff63f24d",
+    "frame 58": "c247e6e1e8e1e292",
+    "frame 66": "e9622523f0d4fd1c",
+    "frame 72": "18ea9454fab06461",
+    "frame 76": "8c6a24626e96a839",
+    "frame 84": "78063192f3bdae49",
+    "grip": "65294e3527ebfa65",
+  },
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: idle 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "ecc92143177946d5",
+  "frame 130": "70a604e57fa2c5be",
+  "frame 20": "4c79b795f28ae272",
+  "frame 58": "2b50a18ba9bf725b",
+  "frame 66": "4aeb0132e603ab53",
+  "frame 72": "941a94b67bd47587",
+  "frame 76": "095af848b32e4bb0",
+  "frame 84": "e96f3b717bb7002a",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: jump smash 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "f8dc7a4cd7d15a51",
+  "frame 130": "1cbcd9dabbf520da",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "1708cd9e60b425fa",
+  "frame 72": "42e078f05158e803",
+  "frame 76": "1642720afbb93603",
+  "frame 84": "99344cf6308f95a2",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: looking at the ball 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "a015b7fc0f2e6f08",
+  "frame 130": "78e3312b4cef04af",
+  "frame 20": "12ff122119894d7e",
+  "frame 58": "72f6126078a8ac7f",
+  "frame 66": "927bda627a475fb4",
+  "frame 72": "aa76653d591664e0",
+  "frame 76": "5dc1ee0e40ed291e",
+  "frame 84": "103e754afa6d3d00",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: ready 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "a484a98a31ed1463",
+  "frame 130": "89230bf4fcd31205",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "d0a2492a0ab610b4",
+  "frame 72": "ae98e1c0c26722f8",
+  "frame 76": "a43e49047d382ccc",
+  "frame 84": "9d01c076d9ac730b",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: running 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "4bc482babd8af178",
+  "frame 130": "d53d06209806ceaf",
+  "frame 20": "6daaeed8ec0f29eb",
+  "frame 58": "af379a3651bdd76c",
+  "frame 66": "a43ea509f77bf02f",
+  "frame 72": "fed6c97dbedec7c0",
+  "frame 76": "d31c8da3c5eacbaa",
+  "frame 84": "330f13076a590a49",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: serve 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "a03197881cdafb97",
+  "frame 130": "41010da153658cc7",
+  "frame 20": "626e30a718646494",
+  "frame 58": "df23a5d2786888a6",
+  "frame 66": "8d8568e340740ad4",
+  "frame 72": "82289955a500fa83",
+  "frame 76": "f777f684bc2d4db0",
+  "frame 84": "1038532ae40a0198",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: smash 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "c4dd1373fb3d1321",
+  "frame 130": "59f86e3c735b3313",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "39b4823a7bf89bb9",
+  "frame 72": "52bbad9ff9864016",
+  "frame 76": "66d2f0e342575e36",
+  "frame 84": "9c4bc969170f60a4",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: strafing left 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "d3b56711ea254499",
+  "frame 130": "3f9167698d8ee995",
+  "frame 20": "f1fa4c181da31a2d",
+  "frame 58": "77d93e6c620d3d97",
+  "frame 66": "06dc1e28fa6aa8b7",
+  "frame 72": "b3d310ccb4ac5208",
+  "frame 76": "6529e26654e15b04",
+  "frame 84": "f23634583d903760",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: strafing right 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "1340f6d1632c1804",
+  "frame 130": "757544c4f5e6ecd0",
+  "frame 20": "98657df057fcf977",
+  "frame 58": "acee84521ae91a07",
+  "frame 66": "65aa0bf9ad15a540",
+  "frame 72": "fd725d2e779ef85a",
+  "frame 76": "c7fa7470f8a1b6a2",
+  "frame 84": "0b55fad28b3a267c",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: volley 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "859c31983187bb8e",
+  "frame 130": "68ab72e6554a6680",
+  "frame 20": "a93568bbca1b1955",
+  "frame 58": "04980646aceea6b7",
+  "frame 66": "e43628d7915f4b19",
+  "frame 72": "20699dd579aeec67",
+  "frame 76": "079c584177766a40",
+  "frame 84": "8dbab859b22653c8",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: walking 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "730e53c994ccd175",
+  "frame 130": "73ff01c6414f3140",
+  "frame 20": "531aa37a55af7af8",
+  "frame 58": "e2e8907f7bcb88a0",
+  "frame 66": "8e0af9fa63218c38",
+  "frame 72": "fb1f723817c50b17",
+  "frame 76": "4d0b137a6a923634",
+  "frame 84": "383d3825e1cb63ec",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: wide backhand on the run 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "ce6605fa61eadc85",
+  "frame 130": "0b69da6300dd02cb",
+  "frame 20": "49169707941f6f41",
+  "frame 58": "106bb19e542adfaf",
+  "frame 66": "a6a7b45d54ba4dc5",
+  "frame 72": "f45bc27099a5f523",
+  "frame 76": "3e51018719f56290",
+  "frame 84": "23275f0de74b88af",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m1: won the point 1`] = `
+{
+  "fingers": "eacdb7e237db2f67",
+  "frame 100": "73f95e6cd7656ea1",
+  "frame 130": "c833e72de5b4730e",
+  "frame 20": "2ffe5b9c84f8a7fa",
+  "frame 58": "05a2186c61fc44c6",
+  "frame 66": "c9a9c9ff7f69b980",
+  "frame 72": "5aba80b1259d42f8",
+  "frame 76": "6c5bdd117a44169f",
+  "frame 84": "820da81e68b37eac",
+  "grip": "65294e3527ebfa65",
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m2: forehand, backhand and jump smash 1`] = `
+{
+  "backhand": {
+    "fingers": "6dc8de7555ee9730",
+    "frame 100": "3fd19cd10a24c42a",
+    "frame 130": "7eb121df1d16d677",
+    "frame 20": "01963c1cd523abf3",
+    "frame 58": "5c08a706ed9acf60",
+    "frame 66": "85082290b98e3c97",
+    "frame 72": "7359002b5975b1dd",
+    "frame 76": "b53274adde9b404c",
+    "frame 84": "5159f75f065cdad9",
+    "grip": "01cf0f488df11ada",
+  },
+  "forehand": {
+    "fingers": "6dc8de7555ee9730",
+    "frame 100": "dcc446ee48bf959b",
+    "frame 130": "6d4e088abe4536c4",
+    "frame 20": "3264cdde410c6b86",
+    "frame 58": "49c66915aea98e18",
+    "frame 66": "2318863f268120dc",
+    "frame 72": "3c52ba7670a92b60",
+    "frame 76": "c05f3cacab46e7b8",
+    "frame 84": "b7295ac98dccfbca",
+    "grip": "01cf0f488df11ada",
+  },
+  "jumpSmash": {
+    "fingers": "6dc8de7555ee9730",
+    "frame 100": "16003477c488df0f",
+    "frame 130": "60a83ec2499584a2",
+    "frame 20": "1eb6ba46a591ae19",
+    "frame 58": "afec073ee943c37c",
+    "frame 66": "3cca4f46c6d14ebf",
+    "frame 72": "f21fae145cfb07c9",
+    "frame 76": "9a044ceb0787fd5f",
+    "frame 84": "bc34504266e52bc5",
+    "grip": "01cf0f488df11ada",
+  },
+}
+`;
+
+exports[`the six right-handed athletes move exactly as before > m3: forehand, backhand and jump smash 1`] = `
+{
+  "backhand": {
+    "fingers": "5bd59dac327d52ae",
+    "frame 100": "80dfb9c4918f05d9",
+    "frame 130": "84151e71c9488516",
+    "frame 20": "3bb78c37b67a89f0",
+    "frame 58": "8e5876b4f942d619",
+    "frame 66": "3be5a5e125fc18c1",
+    "frame 72": "8d19c68e952193a3",
+    "frame 76": "7b9b0a0154fbc093",
+    "frame 84": "ea451b881e3419af",
+    "grip": "d1d362cf441b496d",
+  },
+  "forehand": {
+    "fingers": "5bd59dac327d52ae",
+    "frame 100": "d22142ee30305db4",
+    "frame 130": "2903ad9baf4945f5",
+    "frame 20": "eb245733509711f5",
+    "frame 58": "4b6ee5e0458c44bb",
+    "frame 66": "cd9333d82da6fa81",
+    "frame 72": "e07c63496c77021c",
+    "frame 76": "4483476abf844fba",
+    "frame 84": "c8d167b2643a5a1d",
+    "grip": "d1d362cf441b496d",
+  },
+  "jumpSmash": {
+    "fingers": "5bd59dac327d52ae",
+    "frame 100": "a272779d45d1252c",
+    "frame 130": "6aeb8698a1a1c16d",
+    "frame 20": "73d6f9b2cfa21849",
+    "frame 58": "76d0f50c34b906ad",
+    "frame 66": "75f9f2019957cb48",
+    "frame 72": "04f7a4b4d29da1ab",
+    "frame 76": "bb937338e3f1a739",
+    "frame 84": "132c2ce70eac9cb8",
+    "grip": "d1d362cf441b496d",
+  },
+}
+`;

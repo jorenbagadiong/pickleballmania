@@ -11,3 +11,6 @@ playwright-report/
 .DS_Store
 *.tsbuildinfo
 .playwright-mcp/
+# The secret athlete's private model (docs/tezuka-character.md). Kept out of Git only:
+# files under public/ are still served to every player who opens the game.
+apps/client/public/models/private/

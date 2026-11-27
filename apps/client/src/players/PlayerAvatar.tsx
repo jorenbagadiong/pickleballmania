@@ -198,21 +198,29 @@ function ContactShadow() {
 
 /** The body itself, with the paddle in its hand. */
 function AthleteBody({
+  id,
   loaded,
   paddle,
 }: {
+  id: string
   loaded: LoadedAthlete
   paddle: RefObject<MeshStandardMaterial | null>
 }) {
   const { athlete, controller } = loaded
-  const hand = athlete.all.get('hand_r')
+  const hand = athlete.all.get(controller.paddleBone)
   const grip = controller.paddleGrip
   return (
     <>
       <primitive object={athlete.root} dispose={null} />
       {hand &&
         createPortal(
-          <group position={grip.position} quaternion={grip.rotation} scale={PADDLE_SCALE}>
+          <group
+            name="paddle"
+            userData={{ player: id }}
+            position={grip.position}
+            quaternion={grip.rotation}
+            scale={PADDLE_SCALE}
+          >
             <Paddle
               faceRef={(m) => {
                 paddle.current = m
@@ -514,7 +522,7 @@ export function PlayerAvatar({
 
         {athlete && <ContactShadow />}
         {athlete ? (
-          <AthleteBody loaded={athlete} paddle={paddle} />
+          <AthleteBody id={id} loaded={athlete} paddle={paddle} />
         ) : (
           <group ref={body} scale={BODY_SCALE}>
             <Humanoid rig={rig} nickname={nickname} color={color} shadow={court === undefined} />
