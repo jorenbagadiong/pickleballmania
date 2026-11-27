@@ -64,6 +64,11 @@ export const BallState = schema(
     /** TEZUKA ZONE pull along the ground (cm/s²; 0 unless it is steering). */
     steerX: t.int16().default(0),
     steerZ: t.int16().default(0),
+    /**
+     * Session id of the player that pull is for ('' while there is no pull). Read-only,
+     * for drawing the zone's attraction on the right player; it decides nothing.
+     */
+    steerTarget: t.string().default(''),
     visible: t.boolean().default(false),
     held: t.boolean().default(false),
     /** The shot in flight has bounced on the receiving side. */

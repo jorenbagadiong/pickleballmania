@@ -21,7 +21,7 @@ import type { Motions } from '../players/athlete/locomotion'
 import type { ShotInfo } from '../players/athlete/strokes'
 import { type VrmAthlete, loadVrmAthlete } from '../players/athlete/vrm'
 import { Paddle } from '../players/Paddle'
-import { ZoneField } from '../players/zone/ZoneField'
+import { type ZoneBall, ZoneField } from '../players/zone/ZoneField'
 import type { ZoneState, ZoneTarget, ZoneTier } from '../players/zone/zoneFx'
 import { useUi } from '../state/store'
 
@@ -36,6 +36,62 @@ const DEFAULT_VRM = '/models/private/x1.vrm'
 /** TEZUKA ZONE preview: drawn here only, never in a game ('off' = not in the scene). */
 type ZonePreview = 'off' | ZoneState
 const ZONE_PREVIEWS: ZonePreview[] = ['off', 'inactive', 'available', 'attracting']
+
+/** Where the preview ball is (D2): around the athlete, or flying in on a loop. */
+interface BallPreview {
+  distance: number
+  /** Degrees round the athlete: 0 = in front (+z). */
+  angle: number
+  height: number
+  moving: boolean
+  /** Direction of the pull in degrees (0 = +x), or null: straight at the athlete. */
+  pullAngle: number | null
+}
+const BALL_PREVIEW: BallPreview = {
+  distance: 4,
+  angle: 25,
+  height: 0.9,
+  moving: false,
+  pullAngle: null,
+}
+/** A full approach of the moving preview ball (s). */
+const FLY_IN_SECONDS = 1.8
+
+/** The preview ball: placed from the controls, or flying in toward the athlete on a bend. */
+function PreviewBall({
+  at,
+  paused,
+  object,
+}: {
+  at: { current: BallPreview }
+  paused: boolean
+  object: { current: Mesh | null }
+}) {
+  const t = useRef(0)
+  useFrame((_s, delta) => {
+    const m = object.current
+    if (!m) return
+    if (!paused) t.current += Math.min(delta, 0.1)
+    const b = at.current
+    let distance = b.distance
+    let angle = b.angle
+    let height = b.height
+    if (b.moving) {
+      const k = (t.current % FLY_IN_SECONDS) / FLY_IN_SECONDS
+      distance = 7 - 5.8 * k
+      angle = b.angle + 35 * (1 - k)
+      height = 0.6 + 0.9 * Math.sin(Math.PI * Math.min(1, k * 1.2))
+    }
+    const a = (angle * Math.PI) / 180
+    m.position.set(Math.sin(a) * distance, height, Math.cos(a) * distance)
+  })
+  return (
+    <mesh ref={object} name="preview-ball">
+      <sphereGeometry args={[0.063, 20, 14]} />
+      <meshStandardMaterial color="#d9f99d" roughness={0.6} />
+    </mesh>
+  )
+}
 
 type Anim =
   | 'idle'
@@ -424,13 +480,39 @@ export function Viewer() {
   const [zoneIntensity, setZoneIntensity] = useState(1)
   const [zoneTierChoice, setZoneTier] = useState<ZoneTier>('high')
   const [zoneReduced, setZoneReduced] = useState(false)
+  /** D2 ribbons on (off: the D1 field alone, for comparing). */
+  const [zoneRibbons, setZoneRibbons] = useState(true)
+  const [ballPreview, setBallPreview] = useState<BallPreview>(BALL_PREVIEW)
+  const ballAt = useRef(ballPreview)
+  ballAt.current = ballPreview
+  const previewBall = useRef<Mesh | null>(null)
   const zoneNow = useRef({ zone, zoneIntensity })
   zoneNow.current = { zone, zoneIntensity }
   const readZone = useCallback((): ZoneTarget => {
     const z = zoneNow.current
-    if (z.zone === 'attracting') return { state: 'attracting', pull: z.zoneIntensity }
-    return { state: z.zone === 'available' ? 'available' : 'inactive', pull: 0 }
+    if (z.zone !== 'attracting')
+      return { state: z.zone === 'available' ? 'available' : 'inactive', pull: 0, dirX: 0, dirZ: 0 }
+    // Pull direction: the chosen angle, or from the ball straight at the athlete.
+    const b = ballAt.current
+    const p = previewBall.current?.position
+    let dirX = 0
+    let dirZ = 0
+    if (b.pullAngle !== null) {
+      dirX = Math.cos((b.pullAngle * Math.PI) / 180)
+      dirZ = Math.sin((b.pullAngle * Math.PI) / 180)
+    } else if (p) {
+      const d = Math.hypot(p.x, p.z) || 1
+      dirX = -p.x / d
+      dirZ = -p.z / d
+    }
+    return { state: 'attracting', pull: z.zoneIntensity, dirX, dirZ }
   }, [])
+  const [ballSource] = useState(() => ({ object: null as unknown as Mesh, free: true }))
+  const readBall = useCallback((): ZoneBall | null => {
+    if (!previewBall.current) return null
+    ballSource.object = previewBall.current
+    return ballSource
+  }, [ballSource])
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [error, setError] = useState('')
   const [, tick] = useState(0)
@@ -510,7 +592,11 @@ export function Viewer() {
           zoneIntensity?: number
           zoneTier?: ZoneTier
           zoneReduced?: boolean
+          ball?: Partial<BallPreview>
+          zoneRibbons?: boolean
         }) => {
+          if (o.zoneRibbons !== undefined) setZoneRibbons(o.zoneRibbons)
+          if (o.ball) setBallPreview((b) => ({ ...b, ...o.ball }))
           if (o.zone) setZone(o.zone)
           if (o.zoneIntensity !== undefined) setZoneIntensity(o.zoneIntensity)
           if (o.zoneTier) setZoneTier(o.zoneTier)
@@ -665,13 +751,17 @@ export function Viewer() {
         <Orbit view={view} head={loaded?.stats.height || 1.65} headNow={headNow} />
         <Meter onGl={onGl} />
         {zone !== 'off' && (
-          <ZoneField
-            id="viewer"
-            read={readZone}
-            tier={zoneTierChoice}
-            reducedMotion={zoneReduced}
-            paused={paused}
-          />
+          <>
+            <ZoneField
+              id="viewer"
+              read={readZone}
+              ball={zoneRibbons ? readBall : undefined}
+              tier={zoneTierChoice}
+              reducedMotion={zoneReduced}
+              paused={paused}
+            />
+            <PreviewBall at={ballAt} paused={paused} object={previewBall} />
+          </>
         )}
         {loaded && (
           <Body
@@ -781,6 +871,60 @@ export function Viewer() {
               onChange={(e) => setZoneIntensity(Number(e.currentTarget.value))}
             />
           </label>
+        </div>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1" data-testid="zone-ball">
+          {(
+            [
+              ['ball distance', 'distance', 1, 8, 0.1],
+              ['ball angle', 'angle', -180, 180, 5],
+              ['ball height', 'height', 0.1, 2.2, 0.05],
+            ] as const
+          ).map(([label, key, min, max, step]) => (
+            <label key={key} className="flex items-center gap-1">
+              {label}
+              <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={ballPreview[key]}
+                onChange={(e) =>
+                  setBallPreview((b) => ({ ...b, [key]: Number(e.currentTarget.value) }))
+                }
+              />
+            </label>
+          ))}
+          <label className="flex items-center gap-1">
+            pull dir
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              step={5}
+              disabled={ballPreview.pullAngle === null}
+              value={ballPreview.pullAngle ?? 0}
+              onChange={(e) =>
+                setBallPreview((b) => ({ ...b, pullAngle: Number(e.currentTarget.value) }))
+              }
+            />
+          </label>
+          <button
+            className={button(ballPreview.pullAngle === null)}
+            onClick={() =>
+              setBallPreview((b) => ({ ...b, pullAngle: b.pullAngle === null ? 0 : null }))
+            }
+          >
+            pull at athlete
+          </button>
+          <button className={button(zoneRibbons)} onClick={() => setZoneRibbons((r) => !r)}>
+            ribbons
+          </button>
+          <button
+            className={button(ballPreview.moving)}
+            onClick={() => setBallPreview((b) => ({ ...b, moving: !b.moving }))}
+          >
+            ball flying in
+          </button>
         </div>
         {error && <div className="text-red-300">{error}</div>}
         {s && (

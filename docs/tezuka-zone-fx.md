@@ -1,17 +1,21 @@
 # TEZUKA ZONE visual effects
 
-Phase D1: the zone field and its visual states. Everything here is drawing only. The
-ability itself (`apps/server/src/simulation/zone.ts`, see [tezuka.md](tezuka.md)) is
-unchanged, and nothing here sends anything to the server.
+Phase D1, the zone field and its visual states, and Phase D2, the attraction ribbons.
+Everything here is drawing only:
 
-| Stage | What                               | Status  |
-| ----- | ---------------------------------- | ------- |
-| D1    | Zone field and visual-state basis  | Done    |
-| D2    | Ball attraction and energy streams | Not yet |
-| D3    | Curved ball trails                 | Not yet |
-| D4    | Paddle impact and shockwave        | Not yet |
-| D5    | Cinematic ability introduction     | Not yet |
-| D6    | Performance, accessibility, polish | Not yet |
+- the ability itself (`apps/server/src/simulation/zone.ts`, see [tezuka.md](tezuka.md))
+  is unchanged;
+- nothing here sends anything to the server;
+- D2 added one read-only field to the replicated ball (`steerTarget`, below).
+
+| Stage | What                               | Status    |
+| ----- | ---------------------------------- | --------- |
+| D1    | Zone field and visual-state basis  | Done      |
+| D2    | Ball attraction and energy streams | In review |
+| D3    | Curved ball trails                 | Not yet   |
+| D4    | Paddle impact and shockwave        | Not yet   |
+| D5    | Cinematic ability introduction     | Not yet   |
+| D6    | Performance, accessibility, polish | Not yet   |
 
 ## Where it lives
 
@@ -21,6 +25,7 @@ All in `apps/client/src/players/zone/`:
 | --------------------- | ------------------------------------------------------------------------- |
 | `zoneFx.ts`           | The state machine, easing, quality steps, palette, and the debug registry |
 | `zoneResources.ts`    | The shaders, geometry and materials, with `dispose()`                     |
+| `zoneAttraction.ts`   | D2: the ribbon and flowing-mote shaders and buffers                       |
 | `ZoneField.tsx`       | The component: one per field, driven per frame without React updates      |
 | `PlayerZone.tsx`      | Feeds the game's replicated state to a field                              |
 | `useReducedMotion.ts` | Follows the system's reduced-motion setting                               |
@@ -31,15 +36,15 @@ with them.
 
 ## What decides it (authoritative state)
 
-Everything comes from state the server already replicates. No server change was needed.
+Everything comes from replicated state. D1 needed no server change; D2 added `steerTarget` (see Attraction).
 
-| Question                         | Answer, from the server                                                                                                                |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Is the player the athlete?       | `PlayerState.look === 'x1'`. The server sets that look only for the session it granted                                                 |
-| Is the zone available?           | That player is seated on the court in focus and `PlayerState.connected`                                                                |
-| Is it attracting the ball now?   | The ball as drawn has a pull (`BallState.steerX/steerZ`), the phase is `rally`, and the last hit (`lastHitSlot`) was by the other team |
-| Has the rally ended?             | `phase` is no longer `rally`; the server also zeroes the pull at once                                                                  |
-| Has the athlete dropped or left? | `connected` false (dropped; the seat waits 30 s), or the player is gone from `players`                                                 |
+| Question                         | Answer, from the server                                                                                                                 |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Is the player the athlete?       | `PlayerState.look === 'x1'`. The server sets that look only for the session it granted                                                  |
+| Is the zone available?           | That player is seated on the court in focus and `PlayerState.connected`                                                                 |
+| Is it attracting the ball now?   | The ball as drawn has a pull (`BallState.steerX/steerZ`), it is for this player (`BallState.steerTarget`, D2), and the phase is `rally` |
+| Has the rally ended?             | `phase` is no longer `rally`; the server also zeroes the pull at once                                                                   |
+| Has the athlete dropped or left? | `connected` false (dropped; the seat waits 30 s), or the player is gone from `players`                                                  |
 
 About the grant:
 
@@ -51,8 +56,10 @@ About the grant:
 - **The pull is what the server sent.** The client never computes a pull of its own; it
   reads the one the server sent, interpolated with the ball it draws. So the field lights
   up exactly while the ball on screen is being pulled.
-- **Doubles:** the zone only pulls the other team's shots. The secret athlete's field
-  lights up, and the partner never has one.
+- **Doubles:** the zone only pulls the other team's shots, for one athlete at a time. Only
+  the athlete the pull is for lights up. (In D1 the client inferred this from the team that
+  hit last, which would have lit both of two secret athletes on one team. D2 uses the
+  server's own target instead.)
 
 ## Visual states
 
@@ -220,6 +227,150 @@ remove it in a game, so the viewer comparison above is the one that isolates it.
     (`e2e/zoneFx.spec.ts`);
   - a unit test checks that `dispose()` frees both geometries and both materials.
 
+## Attraction (D2)
+
+While the server pulls the ball for an athlete, thin cyan ribbons run from the ball as
+drawn to that athlete's field, and small motes flow along them toward the athlete. The
+field stays as it was.
+
+### Whom the pull is for
+
+The server already decided this each tick; it just never said so:
+
+- `GameSimulation.zonePlayer()` picks the nearest eligible secret athlete (for a serve,
+  only its receiver), and `zone.step` computes the pull for that athlete.
+- The target can change between ticks, if two eligible athletes swap which is nearer.
+- Nothing was replicated except the pull vector, so the client couldn't tell which athlete
+  the pull was for.
+
+The read-only addition, in three places:
+
+| Where                      | What                                                                                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `GameSimulation.stepRally` | Keeps the athlete it already passes to `zone.step`, as `zoneTargetId`. The call itself is unchanged |
+| `PickleballRoom` (sync)    | Sends it as `BallState.steerTarget`, only while the pull on the wire is not zero; otherwise `''`    |
+| `BallState` (schema)       | The new string field. It changes at most a few times a shot                                         |
+
+Nothing reads it back on the server, so it decides nothing. The steering, its strength
+and the target selection are unchanged; server tests check the replicated target against
+the simulation tick by tick.
+
+On the client:
+
+- The ball snapshot carries `steerTarget`, interpolated with the ball.
+- `zoneTarget` shows attraction only when `steerTarget` is this player's id, the drawn ball
+  carries a pull, and the phase is `rally`.
+- The ribbons follow the pull's direction (the replicated `steerX/steerZ`) and its
+  strength (0.55 to 1, full at 12 m/s²).
+
+### How it is drawn
+
+- **Ribbons:** one instanced draw of up to three camera-facing strips of 40 segments
+  each. Every point is computed on the GPU along a cubic curve:
+  - it starts at the ball as drawn, and leaves it along the server's pull direction
+    blended with the way to the athlete;
+  - it lands on the side of the field's main ring facing the ball;
+  - it swirls slowly between, with streaks travelling toward the athlete;
+  - it fades out within 20 cm of the ball, so the ball is never covered;
+  - it is under 2.6 cm wide, additive, and writes no depth.
+- **Motes:** up to 32, in one fixed buffer, flowing along the same curves from the ball to
+  the ring. One points draw.
+- **One set of uniforms:** the ball position, pull direction, time and strength are
+  shared by both materials, so one write per frame drives both.
+- **Exact positions:** the ball position is written in `onBeforeRender`, after every frame
+  update, from the drawn ball mesh (`frame.ballMesh`, registered by `<Ball/>`) and the
+  field's own matrix. So the ribbons meet the ball exactly where it is drawn this frame;
+  the debug hook measures the gap.
+- **No prediction:** no second ball, no future path. The ribbons only connect where the
+  ball is now to where the athlete is now.
+
+### Transitions
+
+| Event                                  | What the ribbons do                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| The pull for this athlete starts       | Rise in about 0.3 s (rate 9/s), at the pull's strength                                                  |
+| Weaker or stronger pull                | Follow the strength                                                                                     |
+| The pull ends (hit, ball past, let go) | Fade at 10/s and stop drawing below 2% (about 0.4 s); faster than the field's own pull fade (3.5/s)     |
+| The target changes to another athlete  | The old target's ribbons fade as the new target's rise                                                  |
+| Ball bounce                            | Keep following the drawn ball                                                                           |
+| Rally end, ball reset                  | Cut at once when the drawn ball is held or hidden, or jumps further than a real shot could in one frame |
+| Disconnect, departure, other court     | Go with the field (fade, or unmount and free)                                                           |
+| Spectator camera changes               | Nothing to do: the ribbons face whatever camera draws them                                              |
+
+The last pull direction is kept while fading, so a fading ribbon never swings.
+
+### More than one secret athlete
+
+The game allows two: two browsers on the host computer with the key, in one room that
+allows the athlete.
+
+- Each has its own field, available as usual.
+- Only the athlete named in `steerTarget` attracts and draws ribbons.
+- A serve is pulled for its receiver only; any other shot for the nearest eligible
+  athlete.
+
+The browser test checks this from the athlete's own view, the opponent's and a
+spectator's. The bots serve to the two athletes in turn, so the target changes between
+serves. While the drawn ball is pulled for one athlete, the other never shows ribbons or
+attracts.
+
+### Quality and reduced motion
+
+| Step           | Ribbons | Streaks | Shimmer | Flowing motes | Extra draw calls during a pull |
+| -------------- | ------- | ------- | ------- | ------------- | ------------------------------ |
+| high           | 3       | yes     | yes     | 32            | 2                              |
+| medium         | 2       | yes     | no      | 14            | 2                              |
+| low            | 1       | yes     | no      | 0             | 1                              |
+| reduced motion | 1       | no      | no      | 0             | 1                              |
+
+- **Reduced motion:** a single still ribbon. The clock is frozen and nothing travels;
+  attraction shows only as its presence and strength.
+- **Shader variants:** streaks and shimmer are defines, so a change rebuilds the ribbon
+  shader once.
+
+### Developer viewer
+
+The Zone rows gained:
+
+- a preview ball, placed by distance, angle and height, or **ball flying in** on a bending
+  path;
+- the pull direction (an angle, or **pull at athlete**);
+- **ribbons** on and off (off is the D1 field alone, for comparing).
+
+The existing attracting state, pull slider, quality steps, reduced motion and pause all
+apply. Scriptable through `__VIEWER__.set({ ball, zoneRibbons })`. The viewer never
+connects to the game server.
+
+### Performance against D1
+
+**Conditions:** the same machine and method as D1, with less load this time (load average
+3 to 6). The viewer showed the same field attracting at full pull, with the preview ball
+flying in. Ribbons were off (D1) and on (D2), with three interleaved rounds of 5 s per
+condition.
+
+| Step   | Draw calls D1 → D2 | CPU change, per round (mean)   | GPU                     |
+| ------ | ------------------ | ------------------------------ | ----------------------- |
+| high   | 44 → 46            | −0.11, +0.02, +0.02 (−0.02 ms) | not resolved, see below |
+| medium | 44 → 46            | +0.00, +0.06, +0.01 (+0.03 ms) | not resolved            |
+| low    | 43 → 44            | −0.00, +0.04, +0.03 (+0.02 ms) | not resolved            |
+
+- **CPU:** within ±0.11 ms in every round. That is within noise, and far under the 0.5 ms
+  target. The client's per-frame JavaScript for D2 is a few vector copies and uniform
+  writes.
+- **GPU:** the timer's median switched between about 4.1 ms and 8.3 ms independently of the
+  condition, most likely GPU power states. Comparing only rounds where both conditions
+  were in the lower mode gives −0.04 to +0.05 ms (about +0.03 ms). That is within noise
+  too.
+- **In game (training), the field's own draw calls:** high and medium 2 → 4 during a pull;
+  low 1 → 2. The whole frame's draw count varies by more than that from frame to frame
+  (ball, trail, culling).
+- **Memory:** five training sessions in one page (high step). After each:
+  - 0 geometries and 0 textures left;
+  - shader programs 22, then 19, 19, 19, 19;
+  - mount and disposal counts equal every time.
+- **Buffers:** the D2 buffers are 82 vertices for the ribbon strip and 32 × 28 bytes of
+  mote seeds, under 2 KB. Two more shader programs.
+
 ## Tests
 
 - **`apps/client/test/zoneFx.test.ts`** (18 tests):
@@ -262,9 +413,6 @@ remove it in a game, so the viewer comparison above is the one that isolates it.
 
 - **No pull from the athlete's own side:** the zone only acts on opponents' shots, so
   the field never shows attraction while the athlete hits.
-- **Two secret athletes on one team** (possible only with two host-machine browsers that
-  both have the key): both fields light up for a pulled shot, because the zone pulls for
-  the receiving team.
 - **The field's own CPU cost** can't be resolved in the browser on this machine below
   about ±0.5 ms per round (see Performance). It was measured directly only for the
   JavaScript part.

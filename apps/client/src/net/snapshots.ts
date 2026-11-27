@@ -22,6 +22,8 @@ export interface BallSnap {
   /** TEZUKA ZONE pull along the ground (server-decided; 0 almost always). */
   steerX: number
   steerZ: number
+  /** Whom the server computed that pull for ('' when there is none). */
+  steerTarget: string
   visible: boolean
   held: boolean
   /** The shot has bounced on the receiving side. */

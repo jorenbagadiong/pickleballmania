@@ -227,6 +227,11 @@ export class GameSimulation {
    * room allows them). Only those seated, connected and receiving the shot count.
    */
   zoneIds: ReadonlySet<string> = new Set()
+  /**
+   * The zone player the last tick's pull was computed for ('' = none). Only recorded, for
+   * clients to draw the attraction on the right player; nothing reads it back.
+   */
+  zoneTargetId = ''
   readonly zone = new TezukaZone()
   protected readonly fx: FxEvent[] = []
   private readonly ballEvents: BallEvent[] = []
@@ -588,7 +593,9 @@ export class GameSimulation {
 
   private stepRally(dt: number): void {
     if (this.zoneIds.size > 0) {
-      this.zone.step(this.ball, this.zonePlayer(), this.rally, this.rallyShots, this.tick)
+      const target = this.zonePlayer()
+      this.zone.step(this.ball, target, this.rally, this.rallyShots, this.tick)
+      this.zoneTargetId = target?.id ?? ''
     }
     stepBall(this.ball, dt, this.ballEvents)
 

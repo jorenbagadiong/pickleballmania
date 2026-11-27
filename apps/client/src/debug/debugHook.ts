@@ -84,6 +84,7 @@ export function installDebugHook(): void {
             vz: fromWire(b.vz, WIRE.ballSpeed),
             steerX: fromWire((b as { steerX?: number }).steerX ?? 0, WIRE.steer),
             steerZ: fromWire((b as { steerZ?: number }).steerZ ?? 0, WIRE.steer),
+            steerTarget: (b as { steerTarget?: string }).steerTarget ?? '',
             bounced: (b as { bounced?: boolean }).bounced ?? false,
             mustBounce: (b as { mustBounce?: boolean }).mustBounce ?? false,
             visible: b.visible,
@@ -138,15 +139,41 @@ export function installDebugHook(): void {
             const p = o.parent.getWorldPosition(new Vector3())
             at = { x: w.x, z: w.z, playerX: p.x, playerZ: p.z }
           })
-          return { ...f, log: f.log.map((e) => ({ ...e })), ...(at ?? {}) }
+          // D2: how far the ribbons' start (last frame drawn) is from the ball as drawn.
+          const ball = frame.ballMesh?.getWorldPosition(new Vector3())
+          const from = f.ribbonFrom
+          const ribbonGap =
+            ball && from ? Math.hypot(ball.x - from.x, ball.y - from.y, ball.z - from.z) : null
+          return {
+            ...f,
+            ribbonFrom: from ? { ...from } : null,
+            ribbonGap,
+            log: f.log.map((e) => ({ ...e })),
+            ...(at ?? {}),
+          }
         })
-        return { fields, ...zoneFxCounts }
+        // The ball as drawn on the frame the fields were drawn (D2 checks compare with it).
+        const d = frame.world?.ball
+        const drawn = d
+          ? {
+              held: d.held,
+              visible: d.visible,
+              steerTarget: d.steerTarget,
+              pull: Math.hypot(d.steerX, d.steerZ),
+            }
+          : null
+        return { fields, ...zoneFxCounts, drawn, at: frame.now }
       },
       /** Renderer counters for the last frame. */
       render: () => {
         const info = frame.gl?.info
         return info
-          ? { calls: info.render.calls, triangles: info.render.triangles, ...info.memory }
+          ? {
+              calls: info.render.calls,
+              triangles: info.render.triangles,
+              ...info.memory,
+              programs: info.programs?.length ?? 0,
+            }
           : null
       },
       /** Where the camera is, and which court is in focus. */

@@ -80,6 +80,7 @@ interface CourtView {
     curve: number
     steerX?: number
     steerZ?: number
+    steerTarget?: string
     visible: boolean
     held: boolean
     bounced: boolean
@@ -240,6 +241,7 @@ function readCourt(court: CourtView, tick: number): Snapshot | null {
       curve: fromWire(b.curve, WIRE.curve),
       steerX: fromWire(b.steerX ?? 0, WIRE.steer),
       steerZ: fromWire(b.steerZ ?? 0, WIRE.steer),
+      steerTarget: b.steerTarget ?? '',
       visible: b.visible,
       held: b.held,
       bounced: b.bounced,

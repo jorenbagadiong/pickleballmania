@@ -554,7 +554,7 @@ export function PlayerAvatar({
       <Flames active={onFire} />
       {/* TEZUKA ZONE (purely visual): only for the look the server gave, on the court in focus. */}
       {look === SECRET_LOOK && court === undefined && (
-        <PlayerZone id={id} look={look} connected={connected} slot={slot} />
+        <PlayerZone id={id} look={look} connected={connected} />
       )}
 
       <group ref={tag}>

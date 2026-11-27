@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { BALL_RADIUS, SERVE_HOLD_FORWARD, SERVE_HOLD_HEIGHT } from '@pickleball/shared'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { CanvasTexture, Color, type Group, type Mesh, type MeshBasicMaterial } from 'three'
 import { SPIN_COLOR } from '../game/colors'
 import { frame } from '../game/frame'
@@ -46,6 +46,14 @@ export function Ball() {
   const shadowMat = useRef<MeshBasicMaterial>(null)
   const trail = useRef<Group>(null)
   const history = useRef<Array<{ x: number; y: number; z: number }>>([])
+  // Effects drawn to the ball (the zone's attraction) read the drawn mesh itself.
+  useEffect(() => {
+    const mesh = ball.current
+    frame.ballMesh = mesh
+    return () => {
+      if (frame.ballMesh === mesh) frame.ballMesh = null
+    }
+  }, [])
 
   useFrame((_, delta) => {
     const b = ball.current

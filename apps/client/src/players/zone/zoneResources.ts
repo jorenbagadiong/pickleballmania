@@ -14,6 +14,7 @@ import {
   Sphere,
   Vector3,
 } from 'three'
+import { type AttractionResources, createAttractionResources } from './zoneAttraction'
 import { FIELD_RADIUS, TIERS, type TierConfig, ZONE_COLORS } from './zoneFx'
 
 /** Above the court, its lines, the player ring (0.012) and the fire glow (0.016). */
@@ -159,7 +160,9 @@ export interface ZoneResources {
   ground: ShaderMaterial
   moteGeometry: BufferGeometry
   motes: ShaderMaterial
-  /** Applies a detail level (recompiles the ground shader only when it changes). */
+  /** D2: the attraction ribbons and their flowing motes. */
+  attraction: AttractionResources
+  /** Applies a detail level (recompiles a shader only when its variant changes). */
   configure(c: TierConfig): void
   /** Every uniform the frame changes, written in place. */
   set(time: number, presence: number, pull: number, scale: number): void
@@ -210,13 +213,17 @@ export function createZoneResources(initial: TierConfig): ZoneResources {
     fragmentShader: moteFragment,
   })
 
+  const attraction = createAttractionResources(initial)
+
   let current = defines(initial)
   const res: ZoneResources = {
     groundGeometry,
     ground,
     moteGeometry,
     motes,
+    attraction,
     configure(c) {
+      attraction.configure(c)
       const next = defines(c)
       if (
         next.SECONDARY !== current.SECONDARY ||
@@ -242,6 +249,7 @@ export function createZoneResources(initial: TierConfig): ZoneResources {
       ground.dispose()
       moteGeometry.dispose()
       motes.dispose()
+      attraction.dispose()
     },
   }
   res.configure(initial)

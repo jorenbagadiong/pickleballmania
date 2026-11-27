@@ -14,7 +14,8 @@ deliberately overpowered and never available in tournaments.
 | Done    | A VRM body of its own ([tezuka-vrm-prototype.md](tezuka-vrm-prototype.md))                                                 |
 | Done    | The model, `x1.vrm`, built automatically from a CC0 VRoid sample ([tools/characters/x1](../tools/characters/x1/README.md)) |
 | Done    | The zone field and its visual states (Phase D1, [tezuka-zone-fx.md](tezuka-zone-fx.md))                                    |
-| Not yet | The other zone effects (Phases D2 to D6)                                                                                   |
+| Done    | The attraction ribbons (Phase D2, in review, [tezuka-zone-fx.md](tezuka-zone-fx.md))                                       |
+| Not yet | The other zone effects (Phases D3 to D6)                                                                                   |
 
 **Model fallback:** `x1` has no model yet, so it is drawn with the public athlete `m1`
 (`SECRET_LOOK_FALLBACK` in `apps/client/src/players/athlete/assets.ts`). While it is on
@@ -113,6 +114,9 @@ them.
 - Wire: `BallState.steerX` / `steerZ` (int16, cm/s², `WIRE.steer`, up to ±327 m/s²).
   Clients decode them and extrapolate with the same `stepBall`. They never compute any
   steering themselves.
+- Since Phase D2, `BallState.steerTarget` names the player the pull is for (the athlete
+  `zonePlayer()` picked), or `''` while there is no pull. It is read-only: only the
+  attraction effects read it, and nothing on the server reads it back.
 
 ### Who it works for
 

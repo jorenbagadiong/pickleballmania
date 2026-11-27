@@ -50,6 +50,7 @@ function snap(time: number, x: number): Snapshot {
       curve: 0,
       steerX: 0,
       steerZ: 0,
+      steerTarget: '',
       visible: true,
       held: false,
       bounced: false,

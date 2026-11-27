@@ -253,6 +253,77 @@ describe('TEZUKA ZONE only for whom it is meant', () => {
   })
 })
 
+describe('TEZUKA ZONE: whom the pull is for (zoneTargetId, read-only)', () => {
+  it('two secret athletes on one team: a serve is pulled for its receiver only, by name', () => {
+    for (const slot of [0, 1] as const) {
+      for (const receiver of ['z', 'partner'] as const) {
+        const { sim, side } = lab(slot, ZONE_PRESETS.anime, 2)
+        // Seats alternate teams in join order, so `z`'s partner is `p` on either side.
+        const partnerId = 'p'
+        expect(sim.players.get(partnerId)!.slot).toBe(sim.players.get('z')!.slot)
+        sim.zoneIds = new Set(['z', partnerId])
+        const server = sim.players.get('o') as SimPlayer
+        const r = sim.players.get(receiver === 'z' ? 'z' : partnerId) as SimPlayer
+        // The receiver stands in the far corner of the box, away from the serve.
+        r.x = -side * 3.6
+        r.z = side * 6
+        const from = { x: side * 2, y: 0.85, z: -side * 7.2 }
+        sim.fire(server, r, 'serve', from, { x: side * 2.2, z: side * 4.5 }, 0.3, 0, 0)
+        const seen = new Set<string>()
+        let pulled = 0
+        for (let i = 0; i < 400 && sim.phase === 'rally'; i++) {
+          sim.step(FIXED_DT)
+          const pulling = (sim.ball.steerX ?? 0) !== 0 || (sim.ball.steerZ ?? 0) !== 0
+          if (pulling) {
+            pulled++
+            seen.add(sim.zoneTargetId)
+          }
+        }
+        expect(pulled, `${receiver} slot ${slot}`).toBeGreaterThan(5)
+        expect([...seen], `${receiver} slot ${slot}`).toEqual([r.id])
+      }
+    }
+  })
+
+  it('a rally shot: the target is the nearer eligible athlete, tick by tick', () => {
+    const { sim, side } = lab(0, ZONE_PRESETS.anime, 2)
+    sim.zoneIds = new Set(['z', 'p'])
+    const z = sim.players.get('z') as SimPlayer
+    const p = sim.players.get('p') as SimPlayer
+    const o = sim.players.get('o') as SimPlayer
+    z.x = -side * 2.5
+    z.z = side * 5
+    p.x = side * 2.5
+    p.z = side * 5
+    sim.fire(o, p, 'rally', { x: 0, y: 0.8, z: -side * 5 }, { x: p.x, z: p.z }, 0.45, 0, 0)
+    let pulled = 0
+    for (let i = 0; i < 400 && sim.phase === 'rally'; i++) {
+      // Who is nearer before this tick: the one the simulation picks for the pull.
+      const dz = Math.hypot(z.x - sim.ball.x, z.z - sim.ball.z)
+      const dp = Math.hypot(p.x - sim.ball.x, p.z - sim.ball.z)
+      sim.step(FIXED_DT)
+      if ((sim.ball.steerX ?? 0) === 0 && (sim.ball.steerZ ?? 0) === 0) continue
+      pulled++
+      // Exactly as near (the ball midway): the simulation keeps the first; not judged here.
+      if (Math.abs(dz - dp) < 1e-9) continue
+      expect(sim.zoneTargetId).toBe(dz < dp ? 'z' : 'p')
+    }
+    expect(pulled).toBeGreaterThan(5)
+  })
+
+  it('nobody once the rally is over, and nothing changes for a court without the zone', () => {
+    const { sim, side } = lab(0)
+    const o = sim.players.get('o') as SimPlayer
+    const z = sim.players.get('z') as SimPlayer
+    sim.fire(o, z, 'rally', { x: 0, y: 0.8, z: -side * 5 }, { x: 2.5, z: side * 5 }, 0.45, 0, 0)
+    trace(sim, 900)
+    expect(sim.phase).not.toBe('rally')
+    expect(sim.ball.steerX ?? 0).toBe(0)
+    const plain = lab(0, null)
+    expect(plain.sim.zoneTargetId).toBe('')
+  })
+})
+
 describe('TEZUKA ZONE keeps the rules', () => {
   it('pulls before the required bounce, but a swing still waits for it', () => {
     for (const slot of [0, 1] as const) {

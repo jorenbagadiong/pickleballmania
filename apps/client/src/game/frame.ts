@@ -1,4 +1,4 @@
-import type { Camera, Scene, WebGLRenderer } from 'three'
+import type { Camera, Object3D, Scene, WebGLRenderer } from 'three'
 import type { WorldSample } from '../net/snapshots'
 
 /**
@@ -42,4 +42,6 @@ export const frame = {
   /** The scene and renderer (read by the debug hook only). */
   scene: null as Scene | null,
   gl: null as WebGLRenderer | null,
+  /** The ball as drawn (set by <Ball/>), for effects that must meet it exactly. */
+  ballMesh: null as Object3D | null,
 }

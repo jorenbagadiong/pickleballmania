@@ -408,6 +408,8 @@ function syncCourt(
   sb.curve = toWire(b.curve ?? 0, WIRE.curve)
   sb.steerX = toWire(b.steerX ?? 0, WIRE.steer)
   sb.steerZ = toWire(b.steerZ ?? 0, WIRE.steer)
+  // Whom that pull is for, only while there is one on the wire.
+  sb.steerTarget = sb.steerX !== 0 || sb.steerZ !== 0 ? sim.zoneTargetId : ''
   sb.visible = b.visible
   sb.held = b.held
   sb.bounced = sim.ballBounced
