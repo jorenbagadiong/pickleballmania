@@ -111,6 +111,50 @@ export interface Athlete {
   rest: Rest
   all: Map<string, Object3D>
   materials: Record<string, Material>
+  /**
+   * What the paddle hangs from, when that isn't the hand bone in `all` (a VRM body:
+   * its drawn hand; see vrm.ts).
+   */
+  paddleMount?(bone: 'hand_l' | 'hand_r'): Object3D | undefined
+  /** Runs once the pose is written each frame (a VRM body copies it to its own skeleton). */
+  afterPose?(delta: number): void
+  /** Frees what only this body uses. */
+  dispose?(): void
+}
+
+/**
+ * The secret athlete's own model, if one has been put there (kept out of Git; see
+ * docs/tezuka-character.md). Without it, it is drawn as SECRET_LOOK_FALLBACK.
+ */
+export const SECRET_MODEL_URL = '/models/private/x1.vrm'
+
+/**
+ * Whether to ask for the secret model: only if the build found it, so that without it
+ * nobody's browser requests a file that isn't there. Tests can ask anyway with
+ * `?e2e&secretModel`.
+ */
+export function secretModelExpected(): boolean {
+  if (typeof __HAS_SECRET_MODEL__ !== 'undefined' && __HAS_SECRET_MODEL__) return true
+  if (typeof window === 'undefined') return false
+  const q = new URLSearchParams(window.location.search)
+  return q.has('e2e') && q.has('secretModel')
+}
+
+/**
+ * A body for a look: the secret athlete's own model if there is one and it loads,
+ * otherwise the GLB one (`standIn`; both replaceable in tests).
+ */
+export async function loadBody(
+  look: string,
+  standIn = loadAthlete,
+  ownModel = secretModelExpected(),
+): Promise<Athlete> {
+  if (look === SECRET_LOOK && ownModel) {
+    const { loadVrmAthlete } = await import('./vrm')
+    const own = await loadVrmAthlete(SECRET_MODEL_URL)
+    if (own) return own
+  }
+  return standIn(look)
 }
 
 export async function loadAthlete(name: string): Promise<Athlete> {

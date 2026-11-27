@@ -10,11 +10,16 @@ installDebugHook()
 const root = document.getElementById('root')
 if (!root) throw new Error('#root element missing')
 
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
-
-// While people type their name and set up a room, fetch the players' bodies.
-setTimeout(preloadAthletes, 500)
+const query = new URLSearchParams(window.location.search)
+// The character viewer is for development and tests only, and never joins a game.
+if (query.has('viewer') && (import.meta.env.DEV || query.has('e2e'))) {
+  void import('./viewer/Viewer').then(({ Viewer }) => createRoot(root).render(<Viewer />))
+} else {
+  createRoot(root).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+  // While people type their name and set up a room, fetch the players' bodies.
+  setTimeout(preloadAthletes, 500)
+}

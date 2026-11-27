@@ -5,13 +5,14 @@ deliberately overpowered and never available in tournaments.
 
 ## What it gets
 
-| Status  | What                                                                             |
-| ------- | -------------------------------------------------------------------------------- |
-| Done    | The secret look `x1` (`SECRET_LOOK`), given by the server and chosen by nobody   |
-| Done    | Held curves (Q, E, right mouse button), exactly as the `cheater` name gets them  |
-| Done    | The TEZUKA ZONE passive: incoming opponent shots bend toward this player (below) |
-| Done    | Left-handed play on the existing motions, strokes and IK (Phase C2, below)       |
-| Not yet | A model of its own and zone effects (Phases C1, C3 and D)                        |
+| Status  | What                                                                                                 |
+| ------- | ---------------------------------------------------------------------------------------------------- |
+| Done    | The secret look `x1` (`SECRET_LOOK`), given by the server and chosen by nobody                       |
+| Done    | Held curves (Q, E, right mouse button), exactly as the `cheater` name gets them                      |
+| Done    | The TEZUKA ZONE passive: incoming opponent shots bend toward this player (below)                     |
+| Done    | Left-handed play on the existing motions, strokes and IK (Phase C2, below)                           |
+| Proto   | A VRM body of its own: works with a sample model; [tezuka-vrm-prototype.md](tezuka-vrm-prototype.md) |
+| Not yet | The final model and zone effects (Phases C1, C3 and D)                                               |
 
 **Model fallback:** `x1` has no model yet, so it is drawn with the public athlete `m1`
 (`SECRET_LOOK_FALLBACK` in `apps/client/src/players/athlete/assets.ts`). While it is on
@@ -317,8 +318,9 @@ the left-handed ready paddle sits inside its contact disk.
 
 ### Limits
 
-- While the model downloads, a player is drawn as the simple placeholder figure, which is
-  always right-handed (a second or so).
+- While the model downloads, a player is drawn as the simple placeholder figure. It was
+  always right-handed in C2; since the VRM prototype it holds the paddle in the player's
+  own hand.
 - The mirror is exact for a symmetric body. `m1` is nearly symmetric; a future model with
   asymmetric clothing or hair still animates correctly (the skeleton is what's mirrored),
   but its own asymmetry is not mirrored.

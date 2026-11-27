@@ -3,8 +3,8 @@ import type { Athlete } from './assets'
 
 /** The paddle's own axes: its shaft runs down -y, its face looks along z. */
 export const PADDLE_SCALE = 0.8
-/** Middle of the face, from the hand, at scale 1. */
-const FACE_CENTER = 0.37
+/** Middle of the face, from the hand, at scale 1 (in the paddle's frame: (0, -FACE_CENTER, 0)). */
+export const FACE_CENTER = 0.37
 
 /**
  * How the paddle sits in the paddle hand: a handshake grip, the handle across the palm

@@ -1,7 +1,9 @@
 # Secret athlete, Phase C1: asset strategy and character design
 
-Status: **proposal, waiting for approval.** Nothing has been downloaded or installed for
-it. The left-handed animation it builds on (C2) is done; see [tezuka.md](tezuka.md).
+Status: **strategy approved; the VRM compatibility prototype passed** (see
+[tezuka-vrm-prototype.md](tezuka-vrm-prototype.md)). The final model waits for approval
+to be made. The left-handed animation it builds on (C2) is done; see
+[tezuka.md](tezuka.md).
 
 The character is an **original design** in a familiar archetype: a tall, composed,
 left-handed captain with glasses. It must not copy an existing character's face, hairstyle,
@@ -58,11 +60,9 @@ shading, outlines, spring hair, expressions), needs no converter and no re-skinn
 VRoid's own export settings cover texture atlasing and polygon reduction. B is not
 justified. A is the fallback if the runtime rest offsets turn out not to hold.
 
-**Prototype (first step after approval):** load a CC0 VRoid model from OpenGameArt in a
-dev-only page and drive it with the existing `Controller` through the adapter. Pass mark:
-the paddle meets the ball within 14 cm in the same stroke tests as today, feet stay
-planted, and the left-handed mirror holds. Only then would you build the real model. This
-needs one approved download (about 10–20 MB) and one new dependency (`@pixiv/three-vrm`).
+**Prototype: done and passed.** See [tezuka-vrm-prototype.md](tezuka-vrm-prototype.md).
+It used pixiv's VRM 1.0 sample (VRM Public License 1.0), because no CC0 anime VRM could be
+fetched.
 
 ### Adapter outline (for C)
 
@@ -91,7 +91,8 @@ thumb_01/02/03_l`.
   hidden. The licence must allow that kind of distribution: VRoid's terms do, for a model
   made from presets.
 - If the file is missing, the secret athlete is drawn with `m1` as today
-  (`SECRET_LOOK_FALLBACK`), with no error. The check is a request that fails quietly.
+  (`SECRET_LOOK_FALLBACK`), with no error. The page only asks for the file if the build
+  found it, so without one nobody's browser requests it.
 - A `LICENSES.md` next to the model will record what it is made from (VRoid preset parts,
   under pixiv's VRoid Studio terms) and that it is not CC0 and must not be resold.
 
@@ -210,32 +211,157 @@ asset.
   the palm, index finger slightly spread, thumb wrapped over. The animation already does
   this (`poseFingers`); the model only needs normal finger bones.
 
-## 6. Building it in VRoid Studio (if approved)
+## 6. Final character authoring guide (VRoid Studio)
 
-About 60–90 minutes, on Windows or macOS. Slider names differ a little between VRoid
-versions: what matters is the target in each step, which you can check in VRoid's preview.
+The least manual work: start from VRoid Studio's male preset and change only what is
+listed. About 60–90 minutes, on Windows or macOS. VRoid Studio is free, and nothing here
+needs a paid item.
 
-1. **New model:** start from the masculine preset body.
-2. **Body:** height to 1.82 m (or the closest value VRoid shows); head size down until the
-   head fits about 7.5 times into the height; legs longer, shoulders a little wider, waist
-   narrower, arms and legs lean.
-3. **Face:** pick the narrowest masculine face preset. Sharpen the jaw and chin, narrow the
-   eyes, lower the upper lids slightly, set the brows level and close, mouth neutral.
-   Eye colour `#5B3E28`, skin `#F2D5C0`.
-4. **Hair:** pick a short layered masculine preset, set the colour to `#4A3022` with the
-   highlight `#7A5236`, part it on his left, and trim the fringe to the top of the glasses.
-   Keep the groups separate (crown, fringe, sides, back).
-5. **Glasses:** add VRoid's thin rectangular glasses and set the frame to `#3A3F47`.
-6. **Outfit:** a short-sleeved preset top and short shorts. In the texture editor, paint the
-   kit from section 5 (blue body, white sleeves and collar, navy diagonal panel with a
-   silver edge, chest crest; white shorts with a navy stripe). Shoes: preset trainers,
-   recoloured.
-7. **Expression:** leave the default face neutral; the game sets the calm look.
-8. **Export (VRM 1.0):** polygon reduction to about 40k triangles, material reduction to 7
-   or fewer, texture atlas 2048. Title "Captain (private)", licence "do not redistribute
-   for a fee", author you.
-9. Put the file at `apps/client/public/models/private/x1.vrm` and tell me. Everything after
-   that is automated.
+**How to check your work:** slider names differ a little between VRoid versions and
+slider values aren't in metres, so each step gives a target you can check. After
+exporting, the game's character viewer measures the model for you: open `yarn dev`, then
+`http://localhost:5173/?viewer&model=/models/private/x1.vrm`. The design sheet
+[tezuka-character-sheet.svg](tezuka-character-sheet.svg) is the visual reference
+throughout (proportions, colours, kit, glasses, face). I couldn't add VRoid screenshots
+without installing VRoid Studio, which hasn't been approved.
+
+### Step 1: start
+
+1. **Create New → Masculine** (the default male preset).
+2. Save the project right away as `captain.vroid`, outside the repository (for example in
+   your Documents folder). The `.vroid` file is your editable source; the game only needs
+   the export.
+
+### Step 2: body (adult, tall, lean)
+
+On the **Body** tab, overall:
+
+| Setting (VRoid 2.x name, roughly) | Change                     | Target                                                                    |
+| --------------------------------- | -------------------------- | ------------------------------------------------------------------------- |
+| Height                            | up, near the top           | about 1.82 m tall; head joint 1.64–1.68 m in the viewer ("height (head)") |
+| Head size                         | down                       | head fits about 7.5 times into the height                                 |
+| Neck length / width               | a little longer, slimmer   | no thick neck                                                             |
+| Shoulder width                    | a little up                | shoulders about 0.46 m wide (front view)                                  |
+| Chest / bust                      | flat, slight muscle        | athletic, not bulky                                                       |
+| Waist                             | narrower                   | a clear V from shoulders to waist                                         |
+| Arm length                        | default or slightly longer | fingertips reach mid-thigh                                                |
+| Leg length                        | longer                     | hip joint at about 51% of height (sheet)                                  |
+| Hands                             | default size               | normal adult hands                                                        |
+
+**Avoid:** a large head, short legs or a round face (childlike); bulky muscle.
+
+### Step 3: face (sharp, calm, serious)
+
+On the **Face** tab:
+
+1. **Face set:** the narrowest masculine preset with a defined jaw.
+2. **Contour:** sharper jaw and chin, cheeks less round, face a little longer.
+3. **Eyes:**
+   - narrower, with the outer corners slightly raised and the upper lids slightly lowered,
+     so they look composed, not sleepy;
+   - small highlights;
+   - iris colour `#5B3E28`.
+4. **Brows:** straight and level, set close to the eyes, slightly thicker at the inner
+   ends; colour `#2C1B12`.
+5. **Mouth:** closed and level. Avoid presets that smile at rest.
+6. **Nose:** small and straight, line shading only.
+7. **Skin:** `#F2D5C0`, shade `#D9AB91`.
+
+Compare with the face close-up on the sheet: calm, intimidating, adult.
+
+### Step 4: hair (layered, brown)
+
+On the **Hairstyle** tab:
+
+1. Start from a short masculine preset with separate groups for the fringe, sides, back
+   and crown.
+2. **Colour:** base `#4A3022`, highlight `#7A5236`, shade `#2C1B12`.
+3. **Shape:**
+   - part it on his left;
+   - lay the crown back and slightly to the side;
+   - shape the fringe into 4–5 tapering locks that end at the top of the glasses;
+   - cover the top half of the ears;
+   - taper the back to the nape.
+4. **Avoid:** one solid lump, spikes, and copying a known character's hairstyle.
+5. **Hair swaying (spring bones):** keep them on the fringe and back, but **stiff**:
+   stiffness up, gravity down. The prototype showed light spring hair flaring on crouches
+   and landings.
+
+### Step 5: glasses
+
+1. On the **Accessories** tab (or a hair-preset glasses item from VRoid's own presets), add
+   thin rectangular glasses: full rim, lens about 46 × 28 mm, bridge 18 mm (sheet).
+2. **Frame** `#3A3F47`; **lens** tint `#CFE3F0` at about 15% opacity. Check the eyes stay
+   readable behind them.
+3. Use only VRoid's own items or your own textures, not third-party "personal use only"
+   assets.
+
+### Step 6: sportswear (original kit)
+
+On the **Outfit** tab:
+
+1. **Top:** a short-sleeved preset shirt. In the texture editor:
+   - royal blue `#1F4FA8` body, white `#F5F7FA` sleeves and collar band;
+   - a navy `#13284F` diagonal panel from his left shoulder to his right hip, with a 4 mm
+     silver-grey `#A9B4C2` edge;
+   - a small original crest on the chest: a white chevron in a navy shield, no lettering.
+2. **Bottoms:** short shorts, white `#F2F4F7`, mid-thigh, with a 25 mm navy side stripe.
+3. **Shoes:** a preset trainer, recoloured: white upper, navy heel and toe guard, gum sole
+   `#C9A27A`. White crew socks with one blue ring.
+4. **Accessory:** a navy wristband on the **left** wrist (the paddle hand).
+
+**Avoid:** another team's uniform, colours or emblem; text; logos.
+
+### Step 7: materials (MToon)
+
+VRoid exports MToon, which the game renders as it is. Where VRoid exposes the settings
+(per material, under the look or shading options):
+
+| Material      | Shade colour     | Shading (toony) | Rim light  | Outline          |
+| ------------- | ---------------- | --------------- | ---------- | ---------------- |
+| Skin          | `#D9AB91`        | high, soft edge | warm, weak | thin, skin shade |
+| Hair          | `#2C1B12`        | high            | cool, weak | thin, dark brown |
+| Kit           | about 25% darker | high            | cool, weak | thin, navy       |
+| Glasses frame | `#22262C`        | full            | none       | none             |
+| Face / eyes   | VRoid default    | VRoid default   | none       | none             |
+
+Keep outlines thin: the game turns them off at lower quality, and they cost draw calls.
+
+### Step 8: export (VRM 1.0)
+
+**Camera / Exporter → Export → VRM**, with these settings:
+
+| Option                             | Set to                                                          |
+| ---------------------------------- | --------------------------------------------------------------- |
+| VRM version                        | **VRM 1.0** (0.x is refused by the game)                        |
+| Polygon reduction                  | on, until the viewer shows about **40,000 triangles** or fewer  |
+| Material reduction                 | merge to **at most 7** materials (the viewer counts them)       |
+| Texture atlas resolution           | **2048**                                                        |
+| Delete transparent / hidden meshes | on                                                              |
+| Hair swaying bone reduction        | modest (keep the fringe and back chains)                        |
+| Expressions                        | keep the defaults (the game uses a neutral face)                |
+| Title                              | `Captain (private)`                                             |
+| Author                             | you                                                             |
+| Avatar permission / licence        | "only the author"; no redistribution, no modification by others |
+
+Save as `x1.vrm`. Aim for at most **6 MB** and an estimated **32 MB** of texture memory or
+less (shown by the viewer as "textures, ~MB").
+
+### Step 9: put it in the game and check it
+
+1. Copy the file to `apps/client/public/models/private/x1.vrm`. That folder is
+   gitignored, but every player who opens the game can download what's in it.
+2. Restart `yarn dev`, or rebuild for `yarn host`: the game only looks for the file if it
+   was there when it started.
+3. Open the viewer (link above) and check:
+   - estimated bones: none;
+   - height (head): 1.64–1.68 m;
+   - triangles about 40,000 or fewer, materials 7 or fewer, textures about 32 MB or less;
+   - the front, side, back, three-quarter and face views against the sheet;
+   - every stroke: the paddle in the left hand and the ball on the face.
+4. Play **Training** as Tezuka with the key and watch the forehands, backhands, serves and
+   jump smashes.
+5. Then tell me. Integration and final tuning come after that, with your approval.
 
 ## Sources
 

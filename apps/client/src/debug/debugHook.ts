@@ -7,9 +7,12 @@ import {
   focusedCourt,
   latestState,
   latestZoneDebug,
+  onFx,
+  pendingFx,
   prediction,
   startBallLog,
 } from '../net/session'
+import { FACE_CENTER } from '../players/athlete/grip'
 import { useUi } from '../state/store'
 
 interface PlayerView {
@@ -112,6 +115,20 @@ export function installDebugHook(): void {
         })
         return out
       },
+      /**
+       * From the first call on: for every hit the server confirms, how far the hitter's
+       * drawn paddle face is from the contact point when the hit is shown (meters).
+       */
+      hits: () => startHitLog(),
+      /** Since `hits()` was first called: the worst drawn-versus-controller paddle gap (m). */
+      fidelity: () => worstFidelity,
+      /** Renderer counters for the last frame. */
+      render: () => {
+        const info = frame.gl?.info
+        return info
+          ? { calls: info.render.calls, triangles: info.render.triangles, ...info.memory }
+          : null
+      },
       /** Where the camera is, and which court is in focus. */
       camera: () => {
         const p = frame.camera?.position
@@ -134,4 +151,86 @@ export function installDebugHook(): void {
       },
     },
   })
+}
+
+interface HitRecord {
+  id: string
+  /** Drawn paddle face to the contact point (m). */
+  gap: number
+  /** The controller's own paddle face to the contact point (m). */
+  intendedGap: number
+  /** Drawn to controller's own paddle face (m): 0 unless a body draws a copy (VRM). */
+  fidelity: number
+  /** Contact height (m). */
+  y: number
+  at: number
+  late: number
+  swing: number
+}
+const hitLog: HitRecord[] = []
+/** The largest drawn-versus-controller paddle difference seen on any frame (m). */
+let worstFidelity = 0
+let hitLogOn = false
+
+/** A player's paddle face as drawn, and where their controller put it, in the world. */
+function paddleFaces(id: string): { drawn: Vector3; intended: Vector3 } | null {
+  let found: { drawn: Vector3; intended: Vector3 } | null = null
+  frame.scene?.traverse((o) => {
+    if (found || o.name !== 'paddle' || o.userData.player !== id) return
+    const drawn = o.localToWorld(new Vector3(0, -FACE_CENTER, 0))
+    const intended = (o.userData.intended as (() => Vector3) | null)?.() ?? drawn.clone()
+    found = { drawn, intended }
+  })
+  return found
+}
+
+/** Every paddle drawn as a copy of its controller's (VRM): drawn against controller (m). */
+function allFidelities(): number[] {
+  const out: number[] = []
+  frame.scene?.traverse((o) => {
+    if (o.name !== 'paddle' || !o.userData.intended) return
+    const drawn = o.localToWorld(new Vector3(0, -FACE_CENTER, 0))
+    out.push(drawn.distanceTo((o.userData.intended as () => Vector3)()))
+  })
+  return out
+}
+
+function startHitLog() {
+  if (!hitLogOn) {
+    hitLogOn = true
+    const waiting: { id: string; x: number; y: number; z: number; at: number }[] = []
+    onFx((e) => {
+      if (e.kind !== 'hit') return
+      // The session has just queued it with the time it will be shown.
+      const shown = pendingFx[pendingFx.length - 1]
+      waiting.push({ id: e.id, x: e.x, y: e.y, z: e.z, at: shown?.at ?? frame.now })
+    })
+    const check = () => {
+      for (let i = waiting.length - 1; i >= 0; i--) {
+        const w = waiting[i]!
+        if (frame.now < w.at) continue
+        waiting.splice(i, 1)
+        const faces = paddleFaces(w.id)
+        if (faces) {
+          const contact = new Vector3(w.x, w.y, w.z)
+          hitLog.push({
+            id: w.id,
+            gap: faces.drawn.distanceTo(contact),
+            intendedGap: faces.intended.distanceTo(contact),
+            fidelity: faces.drawn.distanceTo(faces.intended),
+            y: w.y,
+            at: w.at,
+            // How late this frame is past the shown moment, and how long since the local
+            // player last swung (s): context for a miss.
+            late: frame.now - w.at,
+            swing: frame.now - frame.localSwingAt,
+          })
+        }
+      }
+      for (const f of allFidelities()) worstFidelity = Math.max(worstFidelity, f)
+      requestAnimationFrame(check)
+    }
+    requestAnimationFrame(check)
+  }
+  return hitLog.slice()
 }

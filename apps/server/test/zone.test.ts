@@ -116,7 +116,10 @@ describe('TEZUKA ZONE interception (deterministic matrix)', () => {
     })
   }
 
-  it('presets get stronger in order', () => {
+  // 1,728 full flights with the zone planning every few ticks (432 ordinary trials of
+  // seed 11, for normal, strong twice and anime): 4.9–6.1 s measured on the C1 machine,
+  // at vitest's 5 s default. Its own limit; the assertions and trials are unchanged.
+  it('presets get stronger in order', { timeout: 30_000 }, () => {
     const r = (p: ZonePreset) => {
       const o = allTrials(p, [11])
         .filter((t) => ORDINARY.includes(t.category))

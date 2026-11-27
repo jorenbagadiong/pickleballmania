@@ -10,8 +10,10 @@ import type {
   Texture,
   WebGLRenderer,
 } from 'three'
-import { type Athlete, loadAthlete, loadMotions } from './assets'
+import { type Athlete, loadBody, loadMotions } from './assets'
 import { Controller } from './controller'
+import type { VrmAthlete } from './vrm'
+import { useUi } from '../../state/store'
 import { handFor } from './handedness'
 
 export interface LoadedAthlete {
@@ -52,7 +54,7 @@ export function useAthlete(name: string, color: string, shadow: boolean): Loaded
 
   useEffect(() => {
     let gone = false
-    Promise.all([loadAthlete(name), loadMotions()])
+    Promise.all([loadBody(name), loadMotions()])
       .then(async ([athlete, motions]) => {
         if (gone) return
         athlete.root.traverse((o) => {
@@ -81,10 +83,24 @@ export function useAthlete(name: string, color: string, shadow: boolean): Loaded
     shirt.emissiveIntensity = 0
   }, [loaded, color])
 
-  // Their own copies of the materials; shapes and pictures are shared.
+  // Optional looks (a VRM body's spring bones and outlines) follow the quality setting.
+  useEffect(() => {
+    const vrm = loaded?.athlete as Partial<VrmAthlete> | undefined
+    if (!vrm?.setQuality) return
+    const apply = (shadows: boolean) => vrm.setQuality!({ springs: shadows, outlines: shadows })
+    apply(useUi.getState().shadows)
+    return useUi.subscribe((s, prev) => {
+      if (s.shadows !== prev.shadows) apply(s.shadows)
+    })
+  }, [loaded])
+
+  // Their own copies of the materials; shapes and pictures are shared. A VRM body is
+  // all its own, and frees all of it.
   useEffect(
     () => () => {
-      if (loaded) for (const m of Object.values(loaded.athlete.materials)) m.dispose()
+      if (!loaded) return
+      for (const m of Object.values(loaded.athlete.materials)) m.dispose()
+      loaded.athlete.dispose?.()
     },
     [loaded],
   )

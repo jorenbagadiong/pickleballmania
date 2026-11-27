@@ -11,6 +11,7 @@ import {
   buildBody,
   disposeBody,
 } from './bodyShapes'
+import type { Hand } from './athlete/handedness'
 import { Paddle } from './Paddle'
 
 /** Joints and materials the animation drives; filled in as the model mounts. */
@@ -24,7 +25,9 @@ export interface Rig {
   kneeR: Group | null
   ankleL: Group | null
   ankleR: Group | null
+  /** The free arm. */
   shoulderL: Group | null
+  /** The paddle arm (the left one for a left-hander), likewise `elbowR`. */
   shoulderR: Group | null
   elbowL: Group | null
   elbowR: Group | null
@@ -87,14 +90,18 @@ interface Props {
   nickname: string
   color: string
   shadow?: boolean
+  /** The paddle hand (see athlete/handedness.ts). */
+  hand?: Hand
 }
 
 /**
  * A player: sculpted body with jointed knees, ankles and elbows, a face and hair that
- * vary by nickname. Faces local +z; the paddle is in the right hand (local -x). One
- * draw call per moving part, so four players stay cheap.
+ * vary by nickname. Faces local +z; the paddle is in the right hand (local -x), or the
+ * left (+x) for a left-hander. `shoulderR`, `elbowR` and `wrist` always mean the paddle
+ * arm. One draw call per moving part, so four players stay cheap.
  */
-export function Humanoid({ rig, nickname, color, shadow = true }: Props) {
+export function Humanoid({ rig, nickname, color, shadow = true, hand = 'right' }: Props) {
+  const paddleSide = hand === 'left' ? 1 : -1
   const body = useMemo(() => buildBody(lookFor(nickname, color)), [nickname, color])
   useEffect(() => () => disposeBody(body), [body])
 
@@ -135,21 +142,21 @@ export function Humanoid({ rig, nickname, color, shadow = true }: Props) {
   const arm = (side: 1 | -1) => (
     <group
       ref={(g) => {
-        if (side === 1) rig.shoulderL = g
-        else rig.shoulderR = g
+        if (side === paddleSide) rig.shoulderR = g
+        else rig.shoulderL = g
       }}
       position={[side * 0.19, 0.382, 0]}
     >
       {part(body.upperArm[side])}
       <group
         ref={(g) => {
-          if (side === 1) rig.elbowL = g
-          else rig.elbowR = g
+          if (side === paddleSide) rig.elbowR = g
+          else rig.elbowL = g
         }}
         position={[0, -UPPER_ARM, 0]}
       >
         {part(body.forearm[side])}
-        {side === -1 && (
+        {side === paddleSide && (
           <group
             ref={(g) => {
               rig.wrist = g

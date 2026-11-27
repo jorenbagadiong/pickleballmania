@@ -10,3 +10,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** Whether public/models/private/x1.vrm existed when the build started (vite.config.ts). */
+declare const __HAS_SECRET_MODEL__: boolean

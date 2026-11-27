@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -26,8 +27,15 @@ export default defineConfig(({ mode }) => {
       .filter(Boolean),
   ]
 
+  // The secret athlete's own model is optional and kept out of Git: the page only asks
+  // for it if it was there when the build (or the dev server) started.
+  const secretModel = existsSync(
+    fileURLToPath(new URL('public/models/private/x1.vrm', import.meta.url)),
+  )
+
   return {
     envDir: repoRoot,
+    define: { __HAS_SECRET_MODEL__: JSON.stringify(secretModel) },
     // Only these variables are exposed to browser code.
     envPrefix: ['VITE_', 'GAME_SERVER_'],
     plugins: [react(), tailwindcss()],

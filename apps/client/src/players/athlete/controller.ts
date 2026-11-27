@@ -1,4 +1,4 @@
-import { Matrix4, Quaternion, Vector3 } from 'three'
+import { Matrix4, type Object3D, Quaternion, Vector3 } from 'three'
 import type { Athlete } from './assets'
 import { type Grip, gripFor, poseFingers } from './grip'
 import { type Hand, WorldMirror, mirrorGrip, mirrorPose, mirrorRest, sideOf } from './handedness'
@@ -62,6 +62,27 @@ const v1 = new Vector3()
 const v2 = new Vector3()
 const v3 = new Vector3()
 const m1 = new Matrix4()
+
+/** Each body's bones as it was loaded (rotations, and the pelvis's position). */
+const loadedPose = new WeakMap<Athlete, { bone: Object3D; q: Quaternion; p: Vector3 }[]>()
+
+/** Puts a body back as it was loaded: remembered the first time it is seen. */
+function toRest(a: Athlete): void {
+  let saved = loadedPose.get(a)
+  if (!saved) {
+    saved = [...new Set([...a.bones, ...a.all.values()])].map((bone) => ({
+      bone,
+      q: bone.quaternion.clone(),
+      p: bone.position.clone(),
+    }))
+    loadedPose.set(a, saved)
+    return
+  }
+  for (const s of saved) {
+    s.bone.quaternion.copy(s.q)
+    s.bone.position.copy(s.p)
+  }
+}
 
 function wrap(a: number): number {
   return Math.atan2(Math.sin(a), Math.cos(a))
@@ -140,6 +161,8 @@ export class Controller {
     this.left = paddleHand === 'left'
     this.rest = this.left ? mirrorRest(athlete.rest) : athlete.rest
     this.fig = new Figure(this.rest)
+    // The grip is measured from the hand at rest, even if another controller moved it.
+    toRest(athlete)
     this.handGrip = gripFor(athlete, sideOf(paddleHand))
     this.grip = this.left ? mirrorGrip(this.handGrip) : this.handGrip
     poseFingers(athlete, sideOf(paddleHand))
@@ -263,6 +286,7 @@ export class Controller {
     this.arms(input, push, jump.lift)
     this.lift = jump.lift
     this.write()
+    this.athlete.afterPose?.(dt)
   }
 
   /** What the game says, as the mirrored body sees it. */

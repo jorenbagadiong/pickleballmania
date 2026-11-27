@@ -29,6 +29,7 @@ import { Humanoid, emptyRig } from './Humanoid'
 import { NameTag } from './NameTag'
 import { knownContact, predictContact } from './athlete/contact'
 import { PADDLE_SCALE } from './athlete/grip'
+import { handFor } from './athlete/handedness'
 import { type LoadedAthlete, useAthlete } from './athlete/useAthlete'
 import { PADDLE_GLOW, Paddle } from './Paddle'
 import type { WorldSample } from '../net/snapshots'
@@ -207,8 +208,17 @@ function AthleteBody({
   paddle: RefObject<MeshStandardMaterial | null>
 }) {
   const { athlete, controller } = loaded
-  const hand = athlete.all.get(controller.paddleBone)
+  const hand =
+    athlete.paddleMount?.(controller.paddleBone) ?? athlete.all.get(controller.paddleBone)
   const grip = controller.paddleGrip
+  // For the debug probe: where the controller itself put the paddle face. A VRM body
+  // draws a copy of that pose; a GLB body draws the controller's own bones.
+  const intendedFace = athlete.paddleMount
+    ? () =>
+        athlete.root.localToWorld(
+          athlete.all.get(controller.paddleBone)!.localToWorld(grip.center.clone()),
+        )
+    : null
   return (
     <>
       <primitive object={athlete.root} dispose={null} />
@@ -216,7 +226,7 @@ function AthleteBody({
         createPortal(
           <group
             name="paddle"
-            userData={{ player: id }}
+            userData={{ player: id, intended: intendedFace }}
             position={grip.position}
             quaternion={grip.rotation}
             scale={PADDLE_SCALE}
@@ -366,6 +376,7 @@ export function PlayerAvatar({
       if (shirt) shirt.emissiveIntensity = a.heat * (0.14 + Math.sin(now * 13) * 0.05)
     } else {
       const speed = Math.hypot(a.vx, a.vz)
+      const mirror = handFor(look) === 'left' ? -1 : 1
       const heading = speed > 0.1 ? Math.atan2(a.vx, a.vz) - yaw : 0
       const run = runPose({ phase: a.phase, speed, heading })
       if (a.swingAt !== a.posedSwingAt) {
@@ -375,7 +386,8 @@ export function PlayerAvatar({
         const bx = ball ? ball.x - x : 0
         const bz = ball ? ball.z - z : 0
         const near = !!ball && Math.hypot(bx, bz) < 5
-        a.backhand = near && bx * Math.cos(yaw) - bz * Math.sin(yaw) > 0.2
+        // Ball on the side away from the paddle hand: a backhand.
+        a.backhand = near && mirror * (bx * Math.cos(yaw) - bz * Math.sin(yaw)) > 0.2
         a.height = near && ball ? ball.y : 1
         // A ball behind their back: spin toward it instead of swinging at nothing.
         const toBall = near ? wrapAngle(Math.atan2(bx, bz) - yaw) : 0
@@ -414,22 +426,23 @@ export function PlayerAvatar({
       }
       if (rig.ankleL) rig.ankleL.rotation.x = ankle(thighL, kneeL)
       if (rig.ankleR) rig.ankleR.rotation.x = ankle(thighR, kneeR)
+      // A left-hander's upper body is the mirror image: turns about y and z change sign.
       if (rig.spine) {
         rig.spine.rotation.set(
           0.08 + swing.lean * 0.5 + breathe,
-          swing.twist - run.armSwing * 0.15 * (1 - swing.active),
+          mirror * (swing.twist - run.armSwing * 0.15 * (1 - swing.active)),
           0,
         )
       }
-      if (rig.head) rig.head.rotation.set(-0.05 - run.leanX * 0.6, -swing.twist * 0.8, 0)
-      rig.shoulderR?.rotation.set(arm.armPitch, arm.armYaw, 0, 'YXZ')
+      if (rig.head) rig.head.rotation.set(-0.05 - run.leanX * 0.6, mirror * -swing.twist * 0.8, 0)
+      rig.shoulderR?.rotation.set(arm.armPitch, mirror * arm.armYaw, 0, 'YXZ')
       if (rig.elbowR) rig.elbowR.rotation.x = -arm.elbow
-      rig.wrist?.rotation.set(swing.wrist, swing.roll, 0, 'XYZ')
+      rig.wrist?.rotation.set(swing.wrist, mirror * swing.roll, 0, 'XYZ')
       // Free arm: pumps while running, held out for balance during a swing.
       rig.shoulderL?.rotation.set(
         -0.35 - run.armSwing * (1 - swing.active * 0.6) - swing.active * 0.35,
-        0.25,
-        0.12 + swing.active * 0.45,
+        mirror * 0.25,
+        mirror * (0.12 + swing.active * 0.45),
         'YXZ',
       )
       if (rig.elbowL) rig.elbowL.rotation.x = -(0.8 + run.run * 0.5 - swing.active * 0.4)
@@ -525,7 +538,13 @@ export function PlayerAvatar({
           <AthleteBody id={id} loaded={athlete} paddle={paddle} />
         ) : (
           <group ref={body} scale={BODY_SCALE}>
-            <Humanoid rig={rig} nickname={nickname} color={color} shadow={court === undefined} />
+            <Humanoid
+              rig={rig}
+              nickname={nickname}
+              color={color}
+              shadow={court === undefined}
+              hand={handFor(look)}
+            />
           </group>
         )}
       </group>
