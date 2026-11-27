@@ -3,6 +3,7 @@ import {
   JUMP_MIN_FORWARD,
   JUMP_REACH_HEIGHT,
   REACH_RADIUS,
+  SECRET_LOOK,
   type Slot,
   type Spot,
   forwardShare,
@@ -35,6 +36,7 @@ import { PADDLE_GLOW, Paddle } from './Paddle'
 import type { WorldSample } from '../net/snapshots'
 import { blendArm, runPose, wrapAngle } from './runPose'
 import { swingPose } from './swingPose'
+import { PlayerZone } from './zone/PlayerZone'
 
 /** Characters are drawn a bit smaller than life so the court reads better. */
 const BODY_SCALE = 0.8
@@ -550,6 +552,10 @@ export function PlayerAvatar({
       </group>
 
       <Flames active={onFire} />
+      {/* TEZUKA ZONE (purely visual): only for the look the server gave, on the court in focus. */}
+      {look === SECRET_LOOK && court === undefined && (
+        <PlayerZone id={id} look={look} connected={connected} slot={slot} />
+      )}
 
       <group ref={tag}>
         <NameTag

@@ -13,6 +13,7 @@ import {
   startBallLog,
 } from '../net/session'
 import { FACE_CENTER } from '../players/athlete/grip'
+import { zoneFields, zoneFxCounts } from '../players/zone/zoneFx'
 import { useUi } from '../state/store'
 
 interface PlayerView {
@@ -124,6 +125,23 @@ export function installDebugHook(): void {
       fidelity: () => worstFidelity,
       /** The local player's last swing or serve as the input saw it (curve, mouse speed). */
       localShot: () => ({ ...frame.localShot, aim: { ...frame.localShot.aim } }),
+      /**
+       * TEZUKA ZONE fields as drawn (Phase D1): each one's presentation state, strength,
+       * detail, state log, and where it is against its player's drawn position.
+       */
+      zoneFx: () => {
+        const fields = [...zoneFields.values()].map((f) => {
+          let at: { x: number; z: number; playerX: number; playerZ: number } | null = null
+          frame.scene?.traverse((o) => {
+            if (at || o.name !== 'zone-field' || o.userData.player !== f.id || !o.parent) return
+            const w = o.getWorldPosition(new Vector3())
+            const p = o.parent.getWorldPosition(new Vector3())
+            at = { x: w.x, z: w.z, playerX: p.x, playerZ: p.z }
+          })
+          return { ...f, log: f.log.map((e) => ({ ...e })), ...(at ?? {}) }
+        })
+        return { fields, ...zoneFxCounts }
+      },
       /** Renderer counters for the last frame. */
       render: () => {
         const info = frame.gl?.info

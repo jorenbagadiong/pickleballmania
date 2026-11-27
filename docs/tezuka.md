@@ -13,7 +13,8 @@ deliberately overpowered and never available in tournaments.
 | Done    | Left-handed play on the existing motions, strokes and IK (Phase C2, below)                                                 |
 | Done    | A VRM body of its own ([tezuka-vrm-prototype.md](tezuka-vrm-prototype.md))                                                 |
 | Done    | The model, `x1.vrm`, built automatically from a CC0 VRoid sample ([tools/characters/x1](../tools/characters/x1/README.md)) |
-| Not yet | Zone effects (Phase D)                                                                                                     |
+| Done    | The zone field and its visual states (Phase D1, [tezuka-zone-fx.md](tezuka-zone-fx.md))                                    |
+| Not yet | The other zone effects (Phases D2 to D6)                                                                                   |
 
 **Model fallback:** `x1` has no model yet, so it is drawn with the public athlete `m1`
 (`SECRET_LOOK_FALLBACK` in `apps/client/src/players/athlete/assets.ts`). While it is on

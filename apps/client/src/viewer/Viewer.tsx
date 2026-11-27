@@ -21,6 +21,8 @@ import type { Motions } from '../players/athlete/locomotion'
 import type { ShotInfo } from '../players/athlete/strokes'
 import { type VrmAthlete, loadVrmAthlete } from '../players/athlete/vrm'
 import { Paddle } from '../players/Paddle'
+import { ZoneField } from '../players/zone/ZoneField'
+import type { ZoneState, ZoneTarget, ZoneTier } from '../players/zone/zoneFx'
 import { useUi } from '../state/store'
 
 /*
@@ -30,6 +32,10 @@ import { useUi } from '../state/store'
  */
 
 const DEFAULT_VRM = '/models/private/x1.vrm'
+
+/** TEZUKA ZONE preview: drawn here only, never in a game ('off' = not in the scene). */
+type ZonePreview = 'off' | ZoneState
+const ZONE_PREVIEWS: ZonePreview[] = ['off', 'inactive', 'available', 'attracting']
 
 type Anim =
   | 'idle'
@@ -414,6 +420,17 @@ export function Viewer() {
   const [axes, setAxes] = useState(true)
   const [quality, setQuality] = useState({ outlines: true, springs: true })
   const shadows = useUi((s) => s.shadows)
+  const [zone, setZone] = useState<ZonePreview>('off')
+  const [zoneIntensity, setZoneIntensity] = useState(1)
+  const [zoneTierChoice, setZoneTier] = useState<ZoneTier>('high')
+  const [zoneReduced, setZoneReduced] = useState(false)
+  const zoneNow = useRef({ zone, zoneIntensity })
+  zoneNow.current = { zone, zoneIntensity }
+  const readZone = useCallback((): ZoneTarget => {
+    const z = zoneNow.current
+    if (z.zone === 'attracting') return { state: 'attracting', pull: z.zoneIntensity }
+    return { state: z.zone === 'available' ? 'available' : 'inactive', pull: 0 }
+  }, [])
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [error, setError] = useState('')
   const [, tick] = useState(0)
@@ -489,7 +506,15 @@ export function Viewer() {
           outlines?: boolean
           springs?: boolean
           shadows?: boolean
+          zone?: ZonePreview
+          zoneIntensity?: number
+          zoneTier?: ZoneTier
+          zoneReduced?: boolean
         }) => {
+          if (o.zone) setZone(o.zone)
+          if (o.zoneIntensity !== undefined) setZoneIntensity(o.zoneIntensity)
+          if (o.zoneTier) setZoneTier(o.zoneTier)
+          if (o.zoneReduced !== undefined) setZoneReduced(o.zoneReduced)
           if (o.anim) setAnim(o.anim)
           if (o.view) setView(o.view)
           if (o.speed !== undefined) setSpeed(o.speed)
@@ -639,6 +664,15 @@ export function Viewer() {
         </mesh>
         <Orbit view={view} head={loaded?.stats.height || 1.65} headNow={headNow} />
         <Meter onGl={onGl} />
+        {zone !== 'off' && (
+          <ZoneField
+            id="viewer"
+            read={readZone}
+            tier={zoneTierChoice}
+            reducedMotion={zoneReduced}
+            paused={paused}
+          />
+        )}
         {loaded && (
           <Body
             loaded={loaded}
@@ -718,6 +752,35 @@ export function Viewer() {
           <button className={button(shadows)} onClick={() => useUi.setState({ shadows: !shadows })}>
             shadows
           </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-1" data-testid="zone-preview">
+          <span className="mr-1 font-semibold">Zone</span>
+          {ZONE_PREVIEWS.map((z) => (
+            <button key={z} className={button(zone === z)} onClick={() => setZone(z)}>
+              {z}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          {(['high', 'medium', 'low'] as const).map((t) => (
+            <button key={t} className={button(zoneTierChoice === t)} onClick={() => setZoneTier(t)}>
+              {t}
+            </button>
+          ))}
+          <button className={button(zoneReduced)} onClick={() => setZoneReduced((r) => !r)}>
+            reduced motion
+          </button>
+          <label className="flex items-center gap-1">
+            pull
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={zoneIntensity}
+              onChange={(e) => setZoneIntensity(Number(e.currentTarget.value))}
+            />
+          </label>
         </div>
         {error && <div className="text-red-300">{error}</div>}
         {s && (
